@@ -1113,5 +1113,31 @@ load();
 
 window.MindMap = { addPair, pairs };
 </script>
+<script>
+// Force reliable card height and text visibility on load
+document.addEventListener('DOMContentLoaded', () => {
+  // Ensure every card has enough height
+  document.querySelectorAll('.flip-card').forEach(card => {
+    card.style.minHeight = '220px';
+  });
+
+  // Force question text to show (color, overflow, size)
+  document.querySelectorAll('.question-div').forEach(div => {
+    div.style.overflow = 'hidden';           // Safe truncation
+    div.style.color = '#fff';                // Hard-code white text
+    div.style.fontSize = '1rem';
+    div.style.lineHeight = '1.5';
+    div.style.display = '-webkit-box';
+    div.style.webkitLineClamp = '10';
+    div.style.webkitBoxOrient = 'vertical';
+    div.style.textOverflow = 'ellipsis';
+  });
+});
+// Force re-render all cards on load to guarantee text shows
+window.addEventListener('load', () => {
+  gridElement.innerHTML = '';
+  pairs.forEach(renderPair);
+});
+</script>
 </body>
 </html>
