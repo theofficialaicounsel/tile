@@ -1,1142 +1,1207 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=5.0,user-scalable=yes" />
-  <title>AI Mind Map — Streaming Fullscreen Auto-Scroll</title>
-  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js"></script>
-  <style>
-   /* Theme & layout */
-*{box-sizing:border-box;margin:0;padding:0}
-:root{
-  --bg:#0a0a0a; --glass:rgba(26,26,26,0.86);
-  --yellow:#ffd700; --text:#fff; --border:rgba(255,215,0,0.28);
-  --blue:#6496ff;
-  --card-min-height:200px; /* Slightly taller base height to give text room */
-}
-html,body{height:100%}
-body{font-family:system-ui,Segoe UI,Roboto,Arial;background:var(--bg);color:var(--text);display:flex;flex-direction:column;height:100vh;overflow:hidden}
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>ai-nspired</title>
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js"></script>
+<style>
+  :root { --card-min-height: 220px; }
+  body { font-family: system-ui, sans-serif; margin: 0; padding: 0; background: #f5f5f5; overflow-x: hidden; }
 
-.header{height:50px;display:flex;align-items:center;justify-content:space-between;padding:0 12px;background:rgba(10,10,10,0.95);border-bottom:2px solid var(--yellow);z-index:1000}
-.logo{color:var(--yellow);font-weight:700;cursor:pointer}
-
-.main-container{flex:1;display:flex;flex-direction:column;overflow:hidden}
-
-.input-panel{background:rgba(10,10,10,0.95);padding:12px;overflow:auto;transition:height .12s,opacity .12s;min-height:0}
-.section{margin-bottom:12px}
-.section-title{font-size:.75rem;color:var(--yellow);margin-bottom:8px;text-transform:uppercase}
-select,textarea,input{width:100%;background:var(--glass);color:var(--text);border:1px solid var(--border);padding:8px;border-radius:6px;font-family:inherit;margin-bottom:8px}
-textarea{min-height:80px;resize:vertical}
-.send-btn{background:var(--yellow);color:var(--bg);border:none;padding:10px 14px;border-radius:6px;font-weight:700}
-
-.resize-divider{height:8px;background:var(--yellow);cursor:ns-resize;border-top:1px solid var(--border);border-bottom:1px solid var(--border);flex-shrink:0}
-
-.canvas{flex:1;overflow:auto;padding:8px;background:var(--bg)}
-
-/* Grid: 2 columns on mobile, responsive elsewhere */
-.grid{
-  display:grid;
-  grid-template-columns:repeat(auto-fit,minmax(280px,1fr));
-  gap:12px;
-  align-items:start;
-}
-@media (max-width:768px){
-  .grid{
-    grid-template-columns:repeat(2,1fr);
-    gap:10px;
+  #selectionBar {
+    position: fixed; top: 0; left: 0; right: 0;
+    background: #fff; border-bottom: 1px solid #ddd;
+    padding: 12px; z-index: 1000; display: none;
+    justify-content: space-between; align-items: center;
+    font-size: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);
   }
-}
+  #selectionBar.active { display: flex; }
+  #mergeSelected { background: #0066ff; color: white; border: none; padding: 8px 16px; border-radius: 8px; }
 
-/* Flip cards - restored original look */
-.flip-card{
-  position:relative;
-  border-radius:8px;
-  border:2px solid var(--border);
-  overflow:hidden;
-  background:var(--bg);
-  min-height:var(--card-min-height);
-}
-.flip-card-inner{
-  width:100%;
-  height:100%;
-  transition:transform .6s;
-  transform-style:preserve-3d;
-  border-radius:8px;
-}
-.flip-card.flipped .flip-card-inner{
-  transform:rotateY(180deg);
-}
+  .fullscreen-overlay {
+    position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+    background: rgba(0,0,0,0.8); display: none; z-index: 10000;
+    backdrop-filter: blur(5px); align-items: center; justify-content: center;
+  }
+  .fullscreen-overlay.active { display: flex; }
+  .fullscreen-card { width: 95%; max-width: 1000px; height: 95vh; background: white; border-radius: 20px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); perspective: 2000px; }
+  .fullscreen-inner { position: relative; width: 100%; height: 100%; transition: transform 0.6s; transform-style: preserve-3d; }
+  .fullscreen-overlay.flipped .fullscreen-inner { transform: rotateY(180deg); }
+  .fullscreen-face { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; border-radius: 20px; display: flex; flex-direction: column; overflow: hidden; }
+  .fullscreen-front, .fullscreen-back { background: #fff; }
+  .fullscreen-header { padding: 12px 20px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; background: linear-gradient(to right, #f8f9fa, #ffffff); }
+  .fullscreen-close, .fullscreen-flip, .fullscreen-split { background: none; border: none; font-size: 20px; cursor: pointer; opacity: 0.6; padding: 8px; border-radius: 6px; }
+  .fullscreen-close:hover, .fullscreen-flip:hover, .fullscreen-split:hover { opacity: 1; background: rgba(0,0,0,0.05); }
+  .fullscreen-content { flex: 1; padding: 25px; overflow-y: auto; font-size: 16px; line-height: 1.6; outline: none; min-height: 0; }
+  .fullscreen-content[contenteditable="true"] { background: rgba(0,102,255,0.03); border-radius: 8px; }
+  .fullscreen-title { font-weight: bold; color: #333; font-size: 18px; }
 
-.card-face{
-  position:absolute;
-  width:100%;
-  height:100%;
-  backface-visibility:hidden;
-  display:flex;
-  flex-direction:column;
-  padding:12px;
-  border-radius:8px;
-  background:var(--glass);
-}
+  .streaming-indicator { text-align: center; color: #666; padding: 20px; font-size: 16px; }
+  .streaming-cursor { display: inline-block; width: 3px; height: 1em; background: currentColor; animation: blink 1s infinite; margin-left: 2px; }
+  @keyframes blink { 50% { opacity: 0; } }
 
-/* Front face - yellow indicator stays, but text gets space */
-.card-front{
-  border-left:4px solid var(--yellow);
-  background:linear-gradient(135deg, rgba(255,215,0,0.06), rgba(255,215,0,0.02));
-  padding-left:16px; /* Push content away from the thick yellow bar */
-}
+  #grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+    padding: 16px;
+    padding-top: 70px;
+    padding-bottom: 120px;
+    transition: padding-bottom 0.3s ease;
+  }
 
-/* Back face */
-.card-back{
-  transform:rotateY(180deg);
-  border-left:4px solid var(--blue);
-  background:linear-gradient(135deg, rgba(100,150,255,0.06), rgba(100,150,255,0.02));
-}
+  .flip-card {
+    height: var(--card-min-height);
+    perspective: 1000px;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    background: white;
+  }
+  .flip-card.new-arrival {
+    opacity: 0;
+    transform: scale(0.95);
+    animation: cardArrival 0.4s ease forwards;
+  }
+  @keyframes cardArrival { to { transform: scale(1); opacity: 1; } }
+  .flip-card-inner { position: relative; width: 100%; height: 100%; transition: transform 0.6s; transform-style: preserve-3d; }
+  .flipped .flip-card-inner { transform: rotateY(180deg); }
+  .card-face { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; display: flex; flex-direction: column; }
+  .card-front { background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%); }
+  .card-back  { transform: rotateY(180deg); background: linear-gradient(135deg, #ffffff 0%, #fafbff 100%); }
+  .question-div, .response-content { padding: 16px; flex-grow: 1; overflow-y: auto; font-size: 15px; line-height: 1.5; }
 
-/* KEY FIX: Question text now guaranteed to show */
-.question-div{
-  flex:1 1 auto;
-  min-height:0; /* Allows flex shrink properly */
-  overflow:hidden;
-  white-space:pre-wrap;
-  word-break:break-word;
-  padding-right:4px;
-  cursor:default;
-  color:var(--text);
-  font-size:1rem;
-  line-height:1.5;
-  margin-top:4px;
-  display:-webkit-box;
-  -webkit-line-clamp:10;
-  -webkit-box-orient:vertical;
-  text-overflow:ellipsis;
-}
+  .flip-card.selected { outline: 4px solid #0066ff; outline-offset: -4px; transform: scale(1.02); z-index: 20; }
 
-.response-content{
-  flex:1;
-  overflow:auto;
-  white-space:pre-wrap;
-  word-break:break-word;
-  font-family:monospace;
-  padding-right:4px;
-}
+  #loading { position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%); background: rgba(0,0,0,0.8); color: white; padding: 25px 40px; border-radius: 12px; display: none; z-index: 2000; }
+  #loading.show { display: block; }
+  #savedNotice { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); background: #333; color: white; padding: 12px 24px; border-radius: 25px; opacity: 0; transition: opacity 0.3s; }
+  #savedNotice.show { opacity: 1; }
 
-.card-actions{
-  display:flex;
-  gap:8px;
-  margin-top:8px;
-  border-top:1px solid var(--border);
-  padding-top:6px;
-  justify-content:flex-end;
-  flex-wrap:wrap;
-}
+  /* Enhanced Input Panel Styles */
+  #inputPanel {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: rgba(255, 255, 255, 0.98);
+    border-top: 1px solid rgba(0, 0, 0, 0.08);
+    padding: 16px 16px max(16px, env(safe-area-inset-bottom));
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.06);
+    z-index: 800;
+    transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    border-radius: 24px 24px 0 0;
+  }
 
-.card-btn{
-  background:rgba(0,0,0,0.5);
-  border:none;
-  color:var(--text);
-  width:36px;
-  height:36px;
-  border-radius:50%;
-  display:inline-flex;
-  align-items:center;
-  justify-content:center;
-  cursor:pointer;
-  padding:6px;
-}
+  #inputPanel.collapsed {
+    transform: translateY(calc(100% - 60px));
+    background: rgba(255, 255, 255, 0.85);
+  }
 
-/* Icons */
-.icon {width:18px;height:18px;display:block}
-.card-btn svg, .fullscreen-card-btn svg {width:18px;height:18px;filter:drop-shadow(0 2px 3px rgba(0,0,0,0.6));}
-.fullscreen-card-btn{
-  background:rgba(0,0,0,0.45);
-  border:none;
-  color:var(--text);
-  width:40px;
-  height:40px;
-  border-radius:8px;
-  display:inline-flex;
-  align-items:center;
-  justify-content:center;
-  cursor:pointer;
-}
+  /* Collapse Toggle Button */
+  .collapse-toggle {
+    position: absolute;
+    top: -40px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(255, 255, 255, 0.95);
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    border-bottom: none;
+    border-radius: 16px 16px 0 0;
+    width: 60px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: #666;
+    font-size: 18px;
+    transition: all 0.3s ease;
+    z-index: 1;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.05);
+  }
 
-/* Modals, fullscreen, loading, etc. (unchanged) */
-.modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.9);z-index:2000;align-items:center;justify-content:center;padding:20px;overflow:auto}
-.modal.show{display:flex}
-.modal-content{background:var(--glass);border:2px solid var(--yellow);border-radius:12px;padding:18px;width:100%;max-width:960px;max-height:90vh;overflow:auto}
+  .collapse-toggle:hover {
+    background: rgba(255, 255, 255, 1);
+    color: #0066ff;
+  }
 
-.fullscreen-overlay{display:none;position:fixed;inset:0;background:var(--bg);z-index:3000;align-items:center;justify-content:center;padding:20px;overflow:hidden;border:4px solid var(--yellow);border-radius:12px;box-shadow:0 0 50px rgba(255,215,0,0.2)}
-.fullscreen-overlay.show{display:flex}
-.fullscreen-overlay.streaming::before{content:'Streaming...';position:absolute;top:10px;right:10px;background:var(--yellow);color:var(--bg);padding:4px 8px;border-radius:4px;font-size:0.8rem;font-weight:bold;z-index:3001}
-.fullscreen-main-content{width:96%;height:94%;max-width:1200px;max-height:86vh;display:flex;flex-direction:column;background:transparent}
-.fullscreen-card-inner{width:100%;height:100%;transition:transform .6s;transform-style:preserve-3d;border-radius:8px;position:relative}
-.fullscreen-card-inner.flipped{transform:rotateY(180deg)}
-.fullscreen-card-face{position:absolute;width:100%;height:100%;backface-visibility:hidden;display:flex;flex-direction:column;padding:20px;border-radius:8px;background:var(--glass);box-shadow:inset 0 0 20px rgba(0,0,0,0.6)}
-.fullscreen-card-face.card-front{border-left:4px solid var(--yellow)}
-.fullscreen-card-face.card-back{transform:rotateY(180deg);border-left:4px solid var(--blue)}
+  .collapse-toggle.collapsed .expand-icon {
+    display: block;
+  }
 
-.fullscreen-question-text{font-weight:700;color:var(--yellow);margin-bottom:12px}
-.fullscreen-response-content{flex:1;overflow:auto;white-space:pre-wrap;word-break:break-word;padding-right:8px;font-family:'Consolas','Monaco','Courier New',monospace;line-height:1.5;font-size:16px}
+  .collapse-toggle.collapsed .collapse-icon {
+    display: none;
+  }
 
-.loading{position:fixed;bottom:18px;right:18px;background:var(--glass);padding:12px 16px;border-radius:8px;border:1px solid var(--yellow);display:none;z-index:999}
-.loading.show{display:block}
-.saved-notice{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:rgba(0,255,0,0.08);color:#0f0;border:1px solid #0f0;padding:10px 14px;border-radius:8px;z-index:999;opacity:0;transition:opacity .18s}
-.saved-notice.show{opacity:1}
+  .collapse-toggle .expand-icon {
+    display: none;
+  }
 
-/* Streaming animations */
-.streaming-cursor{display:inline-block;width:8px;height:1em;background-color:var(--yellow);margin-left:2px;animation:blink 1s infinite;vertical-align:middle}
-@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
-.streaming-indicator{position:absolute;top:10px;right:10px;color:var(--yellow);font-size:0.8rem;animation:pulse 1.5s infinite}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.5}}
+  .collapse-toggle .collapse-icon {
+    display: block;
+    transform: rotate(0deg);
+    transition: transform 0.3s ease;
+  }
 
-/* Compose modal */
-.compose-text{min-height:300px;max-height:70vh;resize:vertical;width:100%;padding:12px;border-radius:8px;background:var(--bg);border:1px solid var(--border);color:var(--text)}
- </style>
+  .collapse-toggle:hover .collapse-icon {
+    transform: rotate(180deg);
+  }
+
+  /* Enhanced Input Container */
+  .input-container {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    max-width: 1200px;
+    margin: 0 auto;
+    position: relative;
+  }
+
+  /* Style for Mode Select */
+  #modeSelect {
+    padding: 12px 16px;
+    border: 1px solid rgba(0, 102, 255, 0.1);
+    border-radius: 14px;
+    background: rgba(0, 102, 255, 0.03);
+    font-size: 15px;
+    font-weight: 500;
+    color: #0066ff;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    min-width: 120px;
+    appearance: none;
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%230066ff'%3e%3cpath d='M7 10l5 5 5-5z'/%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 16px center;
+    background-size: 16px;
+    padding-right: 44px;
+  }
+
+  #modeSelect:hover {
+    background-color: rgba(0, 102, 255, 0.05);
+    border-color: rgba(0, 102, 255, 0.2);
+  }
+
+  #modeSelect:focus {
+    outline: none;
+    border-color: #0066ff;
+    box-shadow: 0 0 0 3px rgba(0, 102, 255, 0.1);
+  }
+
+  /* Enhanced Input Field */
+  #userInput {
+    flex: 1;
+    padding: 16px 20px;
+    border: 2px solid rgba(0, 102, 255, 0.1);
+    border-radius: 16px;
+    font-size: 16px;
+    background: rgba(255, 255, 255, 0.9);
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    line-height: 1.5;
+  }
+
+  #userInput:hover {
+    border-color: rgba(0, 102, 255, 0.2);
+    background: white;
+  }
+
+  #userInput:focus {
+    outline: none;
+    border-color: #0066ff;
+    background: white;
+    box-shadow: 0 4px 16px rgba(0, 102, 255, 0.15);
+  }
+
+  #userInput::placeholder {
+    color: rgba(0, 0, 0, 0.4);
+    font-weight: 400;
+  }
+
+  /* Enhanced Send Button */
+  #sendBtn {
+    background: linear-gradient(135deg, #0066ff, #0052d4);
+    color: white;
+    border: none;
+    padding: 16px 28px;
+    border-radius: 14px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 16px;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-width: 120px;
+    box-shadow: 0 4px 12px rgba(0, 102, 255, 0.25);
+    position: relative;
+    overflow: hidden;
+  }
+
+  #sendBtn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    transition: left 0.6s ease;
+  }
+
+  #sendBtn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(0, 102, 255, 0.35);
+  }
+
+  #sendBtn:hover::before {
+    left: 100%;
+  }
+
+  #sendBtn:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 8px rgba(0, 102, 255, 0.25);
+  }
+
+  #sendBtn:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+  }
+
+  /* Send Button Icon */
+  #sendBtn::after {
+    content: '↗';
+    font-size: 18px;
+    font-weight: 300;
+  }
+
+  /* Enhanced Focus States */
+  #inputPanel:not(.collapsed) .input-container {
+    animation: slideUp 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  @keyframes slideUp {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* Character Counter */
+  .char-counter {
+    position: absolute;
+    bottom: -24px;
+    right: 0;
+    font-size: 12px;
+    color: rgba(0, 0, 0, 0.4);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+
+  #userInput:focus ~ .char-counter {
+    opacity: 1;
+  }
+
+  /* Original modal and menu styles */
+  #moreMenuBtn { position: fixed; bottom: 120px; right: 20px; background: rgba(255,255,255,0.9); border: 1px solid #ddd; width: 56px; height: 56px; border-radius: 50%; font-size: 28px; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.1); z-index: 900; }
+  #moreModal { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 1000; backdrop-filter: blur(5px); }
+  #moreModal.active { display: flex; }
+  .modal-content { background: white; border-radius: 16px; padding: 30px; width: 90%; max-width: 400px; max-height: 80vh; overflow-y: auto; }
+  #saveApiBtn { background: #0066ff; color: white; border: none; padding: 12px; border-radius: 8px; width: 100%; margin-top: 10px; cursor: pointer; font-size: 16px; }
+
+  .card-menu {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    padding: 16px;
+    display: none;
+    flex-direction: column;
+    gap: 12px;
+    z-index: 100;
+  }
+  .card-menu.active { display: flex; }
+  .menu-btn { background: none; border: none; font-size: 24px; cursor: pointer; padding: 8px; text-align: center; border-radius: 8px; transition: background 0.2s; }
+  .menu-btn:hover { background: rgba(0, 102, 255, 0.1); }
+
+  #mergePromptModal, #continuePromptModal {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 1000;
+  }
+  #mergePromptModal.active, #continuePromptModal.active { display: flex; }
+  .prompt-content { background: white; border-radius: 16px; padding: 24px; width: 90%; max-width: 600px; }
+  #mergePromptText, #continuePromptText { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-family: inherit; font-size: 15px; min-height: 120px; resize: vertical; }
+
+  /* Split Modal Styles */
+  #splitModal { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 1000; }
+  #splitModal.active { display: flex; }
+  #splitText { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-family: inherit; font-size: 15px; min-height: 200px; resize: vertical; }
+</style>
 </head>
 <body>
-  <div class="header">
-    <div class="logo" id="logoBtn">ai-nspired.com</div>
-    <div style="display:flex;gap:10px;align-items:center">
-      <button id="settingsOpenBtn">Settings</button>
-      <button id="runTestsBtn" class="send-btn">Run tests</button>
-    </div>
-  </div>
 
-  <div class="main-container">
-    <div class="input-panel" id="inputPanel">
-      <div class="section">
-        <div class="section-title">Mode</div>
-        <select id="modeSelect">
-          <option value="chat">Chat</option>
-          <option value="code">Code</option>
-          <option value="generate">Generate</option>
-        </select>
-      </div>
+<div id="selectionBar">
+  <button id="cancelSelect">🗙</button>
+  <span id="selectCount">1 selected</span>
+  <button id="mergeSelected">Merge</button>
+</div>
 
-      <div class="section">
-        <div class="section-title">Message / Prompt</div>
-        <textarea id="userInput" placeholder="you can ask whatever you like..."></textarea>
-        <div style="display:flex;gap:10px">
-          <button id="sendBtn" class="send-btn">send</button>
-          <button id="composeOpenBtn" class="send-btn" title="Open larger compose box">Compose</button>
-        </div>
-      </div>
-    </div>
-
-    <div class="resize-divider" id="resizeDivider" title="Drag to resize • Double-click to toggle collapse"></div>
-
-    <div class="canvas" id="canvas">
-      <div class="grid" id="grid"></div>
-    </div>
-  </div>
-
-  <div class="saved-notice" id="savedNotice">Saved!</div>
-  <div class="loading" id="loading">Processing...</div>
-
-  <!-- Settings -->
-  <div class="modal" id="settingsModal" aria-hidden="true">
-    <div class="modal-content">
-      <div style="font-size:1.2rem;color:var(--yellow);margin-bottom:12px;text-align:center">Settings</div>
-      <div class="section"><div class="section-title">API Base URL</div><input id="baseUrl" placeholder="https://your-worker.workers.dev"/></div>
-      <div class="section"><div class="section-title">Session ID</div><input id="sessionIdInput" readonly/></div>
-      <div style="display:flex;gap:10px;margin-top:12px">
-        <button id="exportBtn">Export</button>
-        <label for="importFile" class="send-btn" style="cursor:pointer">Import</label>
-        <input id="importFile" type="file" accept=".json" style="display:none"/>
-      </div>
-      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:12px">
-        <button id="settingsCancelBtn">Cancel</button>
-        <button id="settingsSaveBtn" class="send-btn">Save</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Edit -->
-  <div class="modal" id="editModal" aria-hidden="true">
-    <div class="modal-content">
-      <div style="font-size:1.1rem;color:var(--yellow);margin-bottom:12px">Edit Tile <span id="editTileIdDisplay"></span></div>
-      <div class="section"><div class="section-title">Question / Intro</div><textarea id="editQuestion"></textarea></div>
-      <div class="section">
-        <div class="section-title">Response Markdown <button id="editTogglePreview" type="button">Preview</button></div>
-        <textarea id="editResponse"></textarea>
-        <div class="markdown-preview" id="editPreview" style="display:none"></div>
-      </div>
-      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:12px">
-        <button id="editCancelBtn">Cancel</button>
-        <button id="editSaveBtn" class="send-btn">Save</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Compose (full text) -->
-  <div class="modal" id="composeModal" aria-hidden="true">
-    <div class="modal-content">
-      <div style="font-size:1.1rem;color:var(--yellow);margin-bottom:12px">Compose — larger editor</div>
-      <textarea id="composeInput" class="compose-text" placeholder="Write long content here..."></textarea>
-      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:12px">
-        <button id="composeCancelBtn">Cancel</button>
-        <button id="composeSendBtn" class="send-btn">Send</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Fullscreen -->
-  <div class="fullscreen-overlay" id="fullscreenOverlay" aria-hidden="true">
-    <div class="fullscreen-main-content">
-      <div class="fullscreen-card-inner" id="fullscreenInner">
-        <div class="fullscreen-card-face card-front">
-          <div class="fullscreen-question-text" style="flex:1;overflow:auto;white-space:pre-wrap;word-break:break-word;padding-right:8px;line-height:1.5;font-size:16px;"></div>
-          <div style="margin-top:12px;display:flex;gap:10px;justify-content:flex-end">
-            <button class="fullscreen-card-btn" data-action="flip" title="Flip">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" class="icon"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12v6a2 2 0 0 1-2 2H7"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12V6a2 2 0 0 1 2-2h12"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 9l-4 4 4 4"/></svg>
-            </button>
-            <button class="fullscreen-card-btn" data-action="edit" title="Edit">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" class="icon"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 20h9"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16.5 3.5l4 4L8 20H4v-4L16.5 3.5z"></path></svg>
-            </button>
-            <button class="fullscreen-card-btn" data-action="followup" title="Follow up">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" class="icon"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5l7 7-7 7"></path></svg>
-            </button>
-            <button class="fullscreen-card-btn" data-action="delete" title="Delete">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" class="icon"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 6h18"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 6v14a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2V6"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 11v6"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 11v6"></path></svg>
-            </button>
-            <button class="fullscreen-card-btn" data-action="close" title="Close">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" class="icon"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-            </button>
+<div class="fullscreen-overlay" id="fullscreenOverlay">
+  <div class="fullscreen-card">
+    <div class="fullscreen-inner">
+      <div class="fullscreen-face fullscreen-front">
+        <div class="fullscreen-header">
+          <span class="fullscreen-title">Question</span>
+          <div>
+            <button class="fullscreen-flip" title="Flip to Response">↻</button>
+            <button class="fullscreen-split" style="display:none;" title="Split">✂️</button>
+            <button class="fullscreen-close" title="Close">×</button>
           </div>
         </div>
-
-        <div class="fullscreen-card-face card-back">
-          <div class="fullscreen-response-content" style="flex:1;overflow:auto;white-space:pre-wrap;word-break:break-word;padding-right:8px;font-family:'Consolas','Monaco','Courier New',monospace;line-height:1.5;font-size:16px;"></div>
-          <div style="margin-top:12px;display:flex;gap:10px;justify-content:flex-end">
-            <button class="fullscreen-card-btn" data-action="flip" title="Flip">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" class="icon"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12v6a2 2 0 0 1-2 2H7"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12V6a2 2 0 0 1 2-2h12"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 9l-4 4 4 4"/></svg>
-            </button>
-            <button class="fullscreen-card-btn" data-action="edit" title="Edit">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" class="icon"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 20h9"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16.5 3.5l4 4L8 20H4v-4L16.5 3.5z"></path></svg>
-            </button>
-            <button class="fullscreen-card-btn" data-action="followup" title="Follow up">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" class="icon"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5l7 7-7 7"></path></svg>
-            </button>
-            <button class="fullscreen-card-btn" data-action="delete" title="Delete">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" class="icon"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 6h18"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 6v14a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2V6"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 11v6"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 11v6"></path></svg>
-            </button>
-            <button class="fullscreen-card-btn" data-action="close" title="Close">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" class="icon"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-            </button>
+        <div class="fullscreen-content" id="fsQuestion" contenteditable="false"></div>
+      </div>
+      <div class="fullscreen-face fullscreen-back">
+        <div class="fullscreen-header">
+          <span class="fullscreen-title">Response</span>
+          <div>
+            <button class="fullscreen-flip" title="Flip to Question">↻</button>
+            <button class="fullscreen-split" style="display:none;" title="Split">✂️</button>
+            <button class="fullscreen-close" title="Close">×</button>
           </div>
         </div>
+        <div class="fullscreen-content" id="fsResponse" contenteditable="false"></div>
       </div>
     </div>
   </div>
+</div>
+
+<div id="grid"></div>
+
+<div id="loading">🤔 Thinking...</div>
+<div id="savedNotice">💾 Saved!</div>
+
+<button id="moreMenuBtn">⚙️</button>
+
+<div id="moreModal">
+  <div class="modal-content">
+    <h3>Settings & Actions</h3>
+    <input type="url" id="modalBaseUrl" placeholder="API Base URL" style="width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ddd; border-radius: 8px;">
+    <button id="saveApiBtn">💾 Save API URL</button>
+    
+    <div style="margin-top: 24px; border-top: 1px solid #eee; padding-top: 16px;">
+      <button class="modal-btn" id="modalExport" style="width: 100%; padding: 12px; margin: 6px 0; border: 1px solid #ddd; border-radius: 8px; background: white; cursor: pointer; font-size: 16px;">📤 Export State</button>
+      <button class="modal-btn" id="modalImport" style="width: 100%; padding: 12px; margin: 6px 0; border: 1px solid #ddd; border-radius: 8px; background: white; cursor: pointer; font-size: 16px;">📥 Import State</button>
+      <button class="modal-btn" id="modalSummarize" style="width: 100%; padding: 12px; margin: 6px 0; border: 1px solid #ddd; border-radius: 8px; background: white; cursor: pointer; font-size: 16px;">📊 Summarize Context</button>
+    </div>
+    
+    <button class="modal-btn" id="modalClose" style="width: 100%; padding: 12px; margin: 6px 0; border: 1px solid #ddd; border-radius: 8px; background: #f8f9fa; cursor: pointer; font-size: 16px;">✕ Close</button>
+    
+    <input type="file" id="fileInput" accept=".json" style="display:none;">
+  </div>
+</div>
+
+<div id="cardMenu" class="card-menu">
+  <button class="menu-btn" data-action="continue">↪️ Continue</button>
+  <button class="menu-btn" data-action="copy">📋 Copy</button>
+  <button class="menu-btn" data-action="edit">✏️ Edit</button>
+  <button class="menu-btn" data-action="split">✂️ Split</button>
+  <button class="menu-btn" data-action="fullscreen">🔍 Fullscreen</button>
+  <button class="menu-btn" data-action="delete" style="color: #d00;">🗑 Delete</button>
+</div>
+
+<div id="mergePromptModal">
+  <div class="prompt-content">
+    <h3>Merge Instructions (optional)</h3>
+    <p>If blank, will use questions as context</p>
+    <textarea id="mergePromptText" placeholder="How should these be merged?"></textarea>
+    <div style="display:flex;gap:12px;justify-content:flex-end;margin-top:16px;">
+      <button id="mergePromptCancel">Cancel</button>
+      <button id="mergePromptConfirm" style="background:#0066ff;color:white;padding:8px 16px;border-radius:8px;border:none;">Merge</button>
+    </div>
+  </div>
+</div>
+
+<div id="continuePromptModal">
+  <div class="prompt-content">
+    <h3>Continue Instructions (optional)</h3>
+    <p>If blank, will simply continue the previous response</p>
+    <textarea id="continuePromptText" placeholder="What should the continuation focus on?"></textarea>
+    <div style="display:flex;gap:12px;justify-content:flex-end;margin-top:16px;">
+      <button id="continuePromptCancel">Cancel</button>
+      <button id="continuePromptConfirm" style="background:#0066ff;color:white;padding:8px 16px;border-radius:8px;border:none;">Continue</button>
+    </div>
+  </div>
+</div>
+
+<div id="splitModal">
+  <div class="prompt-content">
+    <h3>Split Response</h3>
+    <p>Add "---" between sections to split</p>
+    <textarea id="splitText" placeholder="Enter text with --- separators"></textarea>
+    <div style="display:flex;gap:12px;justify-content:flex-end;margin-top:16px;">
+      <button id="splitCancel">Cancel</button>
+      <button id="splitConfirm" style="background:#0066ff;color:white;padding:8px 16px;border-radius:8px;border:none;">Split</button>
+    </div>
+  </div>
+</div>
+
+<!-- Enhanced Input Panel with Collapse Feature -->
+<div id="inputPanel">
+  <div class="collapse-toggle" id="collapseToggle">
+    <span class="collapse-icon">⌄</span>
+    <span class="expand-icon">⌃</span>
+  </div>
+  
+  <div class="input-container">
+    <select id="modeSelect">
+      <option value="chat">🗨️ Chat</option>
+      <option value="generate">✨ Generate</option>
+      <option value="code">💻 Code</option>
+    </select>
+    
+    <input type="text" id="userInput" placeholder="Ask anything..." autocomplete="off">
+    <span class="char-counter" id="charCounter">0/1000</span>
+    
+    <button id="sendBtn">Send</button>
+  </div>
+</div>
 
 <script>
-// Core variables
-let pairs = [];
-let history = [];
-let sessionId = "main-" + Date.now();
-let accumulatedAIResponse = "";
-let currentTileIdForStreaming = null;
-let editingTileId = null;
-let currentFullscreenTileId = null;
-const textDecoder = (typeof TextDecoder !== 'undefined') ? new TextDecoder('utf-8') : null;
-
-// DOM Elements
-const gridElement = document.getElementById('grid');
-const userInputElement = document.getElementById('userInput');
-const modeSelectElement = document.getElementById('modeSelect');
-const baseUrlInput = document.getElementById('baseUrl');
-const sessionIdInput = document.getElementById('sessionIdInput');
-const settingsModal = document.getElementById('settingsModal');
-const editModal = document.getElementById('editModal');
-const editQuestionTextarea = document.getElementById('editQuestion');
-const editResponseTextarea = document.getElementById('editResponse');
-const editPreviewDiv = document.getElementById('editPreview');
-const editTogglePreviewBtn = document.getElementById('editTogglePreview');
-const editTileIdDisplaySpan = document.getElementById('editTileIdDisplay');
-const loadingIndicator = document.getElementById('loading');
-const savedNotice = document.getElementById('savedNotice');
-
-const resizeDivider = document.getElementById('resizeDivider');
-const inputPanelElement = document.getElementById('inputPanel');
-
-const fullscreenOverlay = document.getElementById('fullscreenOverlay');
-const fullscreenCardInner = document.getElementById('fullscreenInner');
-const fullscreenQuestionTexts = fullscreenOverlay.querySelectorAll('.fullscreen-question-text');
-const fullscreenResponseContents = fullscreenOverlay.querySelectorAll('.fullscreen-response-content');
-
-const composeModal = document.getElementById('composeModal');
-const composeInput = document.getElementById('composeInput');
-
-// Storage keys
-const STORAGE_DATA_KEY = 'mindmap-data';
-const STORAGE_BASEURL_KEY = 'mindmap-baseUrl';
-const STORAGE_DIVIDER_HEIGHT_KEY = 'mindmap-divider-height';
-
-// Utility functions
-function escapeHTML(str = '') {
-  const d = document.createElement('div');
-  d.appendChild(document.createTextNode(String(str)));
-  return d.innerHTML;
-}
-
-function safeRenderMarkdown(md) {
-  const html = marked.parse(md || '');
-  return DOMPurify.sanitize(html);
-}
-
-function getBaseUrl() {
-  return (baseUrlInput.value || '').trim().replace(/\/+$/, '');
-}
-
-// Update card min-height based on available space
-function updateCardMinHeight() {
-  const canvas = document.getElementById('canvas');
-  if (!canvas) return;
-
-  const inputHeight = inputPanelElement.getBoundingClientRect().height || 0;
-  const availableHeight = window.innerHeight - inputHeight - 100;
-  const targetHeight = Math.max(150, Math.min(availableHeight * 0.4, 400));
-
-  document.documentElement.style.setProperty('--card-min-height', targetHeight + 'px');
-}
-
-// Add new tile pair — with auto-scroll to new card
-function addPair(p) {
-  const id = (window.crypto && typeof crypto.randomUUID === 'function') ? crypto.randomUUID() : `id-\( {Date.now()}- \){Math.floor(Math.random() * 100000)}`;
-  pairs.push({
-    id,
-    question: p.question,
-    response: p.response || '',
-    sessionId: p.sessionId || sessionId
-  });
-  renderPair(pairs[pairs.length - 1]);
-  save();
-  updateCardMinHeight();
-
-  // Auto-scroll to the new card
-  const newCard = gridElement.querySelector(`[data-id="${id}"]`);
-  if (newCard) {
-    newCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+class AICardSystem {
+  constructor() {
+    this.pairs = [];
+    this.sessionId = "main-" + Date.now();
+    this.currentStreamingId = null;
+    this.selectedTiles = new Set();
+    this.isSelectMode = false;
+    this.fullscreenId = null;
+    this.isEditMode = false;
+    this.currentContinueId = null;
+    this.textDecoder = new TextDecoder('utf-8');
   }
 
-  return id;
-}
-
-// Render tile to grid
-function renderPair(p) {
-  let responseHTML = 'Waiting for AI...';
-  if (p.response && p.response !== '...' && !p.response.startsWith('Error:')) {
-    responseHTML = safeRenderMarkdown(p.response);
-  } else if (p.response === '...') {
-    responseHTML = '<div class="streaming-indicator"><span class="streaming-cursor"></span> Streaming...</div>';
-  } else if (p.response && p.response.startsWith('Error:')) {
-    responseHTML = `<p style="color:red">${escapeHTML(p.response)}</p>`;
+  init() {
+    this.loadFromStorage();
+    this.bindEvents();
+    this.initInputPanelCollapse(); // Initialize the collapse functionality
   }
 
-  const card = document.createElement('div');
-  card.className = 'flip-card';
-  card.dataset.id = p.id;
+  initInputPanelCollapse() {
+    const inputPanel = document.getElementById('inputPanel');
+    const collapseToggle = document.getElementById('collapseToggle');
+    const charCounter = document.getElementById('charCounter');
+    const userInput = document.getElementById('userInput');
+    const grid = document.getElementById('grid');
 
-  card.innerHTML = `
-    <div class="flip-card-inner">
-      <div class="card-face card-front">
-        <div class="question-div">${escapeHTML(p.question)}</div>
-        <div class="card-actions">
-          <button class="card-btn" data-action="show-fullscreen" data-id="${p.id}" title="Fullscreen">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" class="icon"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7V4h3M20 7V4h-3M4 17v3h3M20 17v3h-3"/></svg>
-          </button>
-          <button class="card-btn" data-action="edit" data-id="${p.id}" title="Edit">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" class="icon"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 20h9M16.5 3.5l4 4L8 20H4v-4L16.5 3.5z"/></svg>
-          </button>
-          <button class="card-btn delete" data-action="delete" data-id="${p.id}" title="Delete">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" class="icon"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 6h18M8 6v14a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2V6"/></svg>
-          </button>
-          <button class="card-btn" data-action="copy" data-id="${p.id}" title="Copy">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" class="icon"><rect x="9" y="9" width="13" height="13" rx="2"/><rect x="2" y="2" width="13" height="13" rx="2"/></svg>
-          </button>
-          <button class="card-btn" data-action="followup" data-id="${p.id}" title="Follow Up">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" class="icon"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5l7 7-7 7"/></svg>
-          </button>
-        </div>
-      </div>
-
-      <div class="card-face card-back">
-        <div class="response-content">${responseHTML}</div>
-        <div class="card-actions">
-          <button class="card-btn" data-action="show-fullscreen" data-id="${p.id}" title="Fullscreen">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" class="icon"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7V4h3M20 7V4h-3M4 17v3h3M20 17v3h-3"/></svg>
-          </button>
-          <button class="card-btn" data-action="edit" data-id="${p.id}" title="Edit">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" class="icon"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 20h9M16.5 3.5l4 4L8 20H4v-4L16.5 3.5z"/></svg>
-          </button>
-          <button class="card-btn" data-action="copy" data-id="${p.id}" title="Copy">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" class="icon"><rect x="9" y="9" width="13" height="13" rx="2"/><rect x="2" y="2" width="13" height="13" rx="2"/></svg>
-          </button>
-        </div>
-      </div>
-    </div>
-  `;
-
-  card.addEventListener('click', e => {
-    if (e.target.closest('.card-btn') || e.target.closest('.card-actions')) return;
-    card.classList.toggle('flipped');
-  });
-
-  gridElement.appendChild(card);
-}
-
-// Update tile response with streaming support
-function updateTileResponseContent(tileId, content, isStreaming = false) {
-  const card = gridElement.querySelector(`[data-id="${tileId}"]`);
-  if (card) {
-    const responseElement = card.querySelector('.card-back .response-content');
-    if (responseElement) {
-      if (isStreaming) {
-        responseElement.textContent = (responseElement.textContent || '') + content;
-        responseElement.scrollTop = responseElement.scrollHeight;
+    // Toggle collapse state
+    collapseToggle.addEventListener('click', function() {
+      inputPanel.classList.toggle('collapsed');
+      collapseToggle.classList.toggle('collapsed');
+      
+      // Adjust grid padding
+      if (inputPanel.classList.contains('collapsed')) {
+        grid.style.paddingBottom = '80px';
       } else {
-        responseElement.innerHTML = content;
+        grid.style.paddingBottom = '120px';
+        // Focus input when expanded
+        setTimeout(() => userInput.focus(), 300);
       }
-    }
+    });
+
+    // Character counter
+    userInput.addEventListener('input', function() {
+      const maxLength = 1000;
+      const currentLength = userInput.value.length;
+      charCounter.textContent = `${currentLength}/${maxLength}`;
+      
+      // Update color based on length
+      if (currentLength > maxLength * 0.9) {
+        charCounter.style.color = '#ff3b30';
+      } else if (currentLength > maxLength * 0.75) {
+        charCounter.style.color = '#ff9500';
+      } else {
+        charCounter.style.color = 'rgba(0, 0, 0, 0.4)';
+      }
+    });
+
+    // Keyboard shortcut to toggle input panel (Cmd/Ctrl + .)
+    document.addEventListener('keydown', function(e) {
+      if ((e.metaKey || e.ctrlKey) && e.key === '.') {
+        e.preventDefault();
+        collapseToggle.click();
+      }
+      
+      // Escape to collapse
+      if (e.key === 'Escape' && !inputPanel.classList.contains('collapsed')) {
+        collapseToggle.click();
+      }
+    });
+
+    // Auto-expand when focusing input (if collapsed)
+    userInput.addEventListener('focus', function() {
+      if (inputPanel.classList.contains('collapsed')) {
+        collapseToggle.click();
+      }
+    });
+
+    // Load saved panel state
+    const loadPanelState = () => {
+      const wasCollapsed = localStorage.getItem('inputPanelCollapsed') === 'true';
+      if (wasCollapsed) {
+        collapseToggle.click(); // Toggle to collapsed state
+      }
+    };
+
+    // Save panel state
+    const savePanelState = () => {
+      localStorage.setItem('inputPanelCollapsed', inputPanel.classList.contains('collapsed'));
+    };
+
+    // Load saved state on init
+    loadPanelState();
+    collapseToggle.addEventListener('click', savePanelState);
   }
 
-  if (currentFullscreenTileId === tileId) {
-    fullscreenResponseContents.forEach(el => {
-      if (isStreaming) {
-        el.textContent = (el.textContent || '') + content;
-      } else {
-        el.innerHTML = content;
+  bindEvents() {
+    document.getElementById('sendBtn').onclick = () => this.sendMessage();
+    document.getElementById('userInput').onkeydown = e => {
+      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); this.sendMessage(); }
+    };
+
+    document.getElementById('moreMenuBtn').onclick = () => {
+      document.getElementById('modalBaseUrl').value = localStorage.getItem('ai-baseurl') || '';
+      document.getElementById('moreModal').classList.add('active');
+    };
+    document.getElementById('modalClose').onclick = () => document.getElementById('moreModal').classList.remove('active');
+    document.getElementById('saveApiBtn').onclick = () => {
+      const url = document.getElementById('modalBaseUrl').value.trim();
+      if (!url) return alert('Enter API URL');
+      localStorage.setItem('ai-baseurl', url);
+      document.getElementById('moreModal').classList.remove('active');
+      this.showNotice('API URL saved');
+    };
+
+    // Context summarizer button
+    document.getElementById('modalSummarize').onclick = () => {
+      document.getElementById('moreModal').classList.remove('active');
+      this.summarizeContext();
+    };
+
+    document.getElementById('modalExport').onclick = () => this.exportState();
+    document.getElementById('modalImport').onclick = () => document.getElementById('fileInput').click();
+    document.getElementById('fileInput').onchange = e => this.importState(e);
+
+    // Fullscreen events
+    document.querySelectorAll('.fullscreen-close').forEach(b => b.onclick = () => this.closeFullscreen());
+    document.querySelectorAll('.fullscreen-flip').forEach(b => b.onclick = () => document.getElementById('fullscreenOverlay').classList.toggle('flipped'));
+    document.querySelectorAll('.fullscreen-split').forEach(b => b.onclick = () => this.openSplitFromFullscreen());
+
+    // Selection and merge
+    document.getElementById('cancelSelect').onclick = () => this.exitSelectMode();
+    document.getElementById('mergeSelected').onclick = () => this.promptMerge();
+
+    // Prompt modals
+    document.getElementById('mergePromptCancel').onclick = () => document.getElementById('mergePromptModal').classList.remove('active');
+    document.getElementById('mergePromptConfirm').onclick = () => this.mergeSelectedTiles();
+
+    document.getElementById('continuePromptCancel').onclick = () => document.getElementById('continuePromptModal').classList.remove('active');
+    document.getElementById('continuePromptConfirm').onclick = () => this.performContinue();
+
+    // Split modal
+    document.getElementById('splitCancel').onclick = () => document.getElementById('splitModal').classList.remove('active');
+    document.getElementById('splitConfirm').onclick = () => this.performSplit();
+
+    // Card menu
+    document.getElementById('cardMenu').addEventListener('click', e => {
+      const btn = e.target.closest('.menu-btn');
+      if (btn) {
+        const action = btn.dataset.action;
+        this.handleMenuAction(action, this.currentCardMenuId);
+        document.getElementById('cardMenu').classList.remove('active');
       }
-      el.scrollTop = el.scrollHeight;
+    });
+
+    document.addEventListener('click', e => {
+      if (!e.target.closest('#cardMenu')) document.getElementById('cardMenu').classList.remove('active');
     });
   }
-}
 
-// Process streaming response
-async function processSSEStream(reader, tileId) {
-  showFullscreen(tileId);
-  fullscreenOverlay.classList.add('streaming');
+  handleMenuAction(action, id) {
+    if (action === 'continue') this.promptContinue(id);
+    if (action === 'copy') this.copyResponse(id);
+    if (action === 'edit') this.startFullscreenEdit(id);
+    if (action === 'split') this.openSplit(id);
+    if (action === 'fullscreen') this.openFullscreen(id);
+    if (action === 'delete') if (confirm('Delete this card?')) this.deletePair(id);
+  }
 
-  let buffer = '';
-  accumulatedAIResponse = '';
+  // FIXED: Fullscreen now properly shows both question and response
+  openFullscreen(id, startOnResponse = false) {
+    const p = this.pairs.find(x => x.id === id);
+    if (!p) return;
+    
+    // Clear any previous edit state
+    this.isEditMode = false;
+    document.getElementById('fsQuestion').contentEditable = false;
+    document.getElementById('fsResponse').contentEditable = false;
+    document.querySelectorAll('.fullscreen-split').forEach(b => b.style.display = 'none');
 
-  try {
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
+    // Populate both sides
+    document.getElementById('fsQuestion').innerHTML = this.safeRenderMarkdown(p.question);
+    document.getElementById('fsResponse').innerHTML = p.response && p.response !== '...' 
+      ? this.safeRenderMarkdown(p.response) 
+      : '<div class="streaming-indicator"><span class="streaming-cursor"></span> Generating...</div>';
 
-      const chunkText = textDecoder ? textDecoder.decode(value, { stream: true }) : new TextDecoder('utf-8').decode(value);
-      buffer += chunkText;
+    const overlay = document.getElementById('fullscreenOverlay');
+    overlay.classList.add('active');
+    if (startOnResponse) overlay.classList.add('flipped');
+    else overlay.classList.remove('flipped');
+    this.fullscreenId = id;
+    document.body.style.overflow = 'hidden';
+  }
 
-      // Split on SSE event boundaries (\n\n or \r\n\r\n etc.)
-      const parts = buffer.split(/\r?\n\r?\n/);
-      buffer = parts.pop() || '';
+  copyResponse(id) {
+    const tile = this.pairs.find(p => p.id === id);
+    if (tile && tile.response) {
+      navigator.clipboard.writeText(tile.response);
+      this.showNotice('Copied to clipboard');
+    }
+  }
 
-      for (const part of parts) {
-        if (!part.trim()) continue;
+  promptContinue(id) {
+    this.currentContinueId = id;
+    document.getElementById('continuePromptText').value = '';
+    document.getElementById('continuePromptModal').classList.add('active');
+  }
 
-        const lines = part.split(/\r?\n/);
+  performContinue() {
+    const tile = this.pairs.find(p => p.id === this.currentContinueId);
+    if (!tile) return;
 
-        let isComment = false;
-        let jsonData = null;
+    const custom = document.getElementById('continuePromptText').value.trim();
+    const prompt = custom 
+      ? `Previous response:\n\n${tile.response || ''}\n\nUser instruction for continuation:\n${custom}`
+      : `Continue the previous response thoughtfully:\n\n${tile.response || ''}\n\nContinuing:`;
 
-        for (const line of lines) {
-          const trimmed = line.trim();
-          if (!trimmed) continue;
+    const newId = this.addPair({ question: `Continue: ${tile.question.slice(0,40)}...`, response: '...' }, true);
+    this.currentStreamingId = newId;
+    this.sendWithPrompt(prompt);
+    document.getElementById('continuePromptModal').classList.remove('active');
+  }
 
-          // Skip SSE comments (lines starting with ':')
-          if (line[0] === ':') {
-            isComment = true;
-            continue;
-          }
+  startFullscreenEdit(id) {
+    this.openFullscreen(id);
+    this.isEditMode = true;
+    document.getElementById('fsQuestion').contentEditable = true;
+    document.getElementById('fsResponse').contentEditable = true;
+    document.querySelectorAll('.fullscreen-split').forEach(b => b.style.display = 'block');
+    this.showNotice('Editing — flip to switch sides, close to save');
+  }
 
-          if (trimmed.startsWith('data:')) {
-            const dataStr = trimmed.substring(5).trim();
-            if (dataStr === '[DONE]') {
-              // Final processing (your existing cleanup code)
-              let cleanResponse = accumulatedAIResponse.trim();
-              // ... (keep your existing cleanup regexes here)
-              cleanResponse = cleanResponse
-                .replace(/\{[\s\S]*?"type"\s*:\s*"tool_use"[\s\S]*?\}/g, '')
-                .replace(/\{[\s\S]*?"function"[\s\S]*?\}/g, '')
-                .replace(/```json\s*\{[\s\S]*?\}\s*```/g, '')
-                .replace(/\{[\s\S]*?"choices"\s*:\s*\[\s*\][\s\S]*?\}/g, '')
-                .replace(/^\s*\{.*?\}\s*$/gm, '')
-                .replace(/^\s*\[.*?\]\s*$/gm, '')
-                .replace(/\n{3,}/g, '\n\n')
-                .trim();
+  openSplitFromFullscreen() {
+    const response = document.getElementById('fsResponse').innerText;
+    document.getElementById('splitText').value = response;
+    document.getElementById('splitModal').classList.add('active');
+  }
 
-              const finalHTML = cleanResponse 
-                ? safeRenderMarkdown(cleanResponse) 
-                : '<em style="color:#888">No content received</em>';
-
-              updateTileResponseContent(tileId, finalHTML, false);
-
-              const tile = pairs.find(t => t.id === tileId);
-              if (tile) tile.response = cleanResponse || '';
-              save();
-
-              fullscreenOverlay.classList.remove('streaming');
-              return;
-            }
-
-            try {
-              jsonData = JSON.parse(dataStr);
-            } catch (e) {
-              // Not JSON → ignore (rare)
-            }
-          }
-        }
-
-        // If entire event was a comment → skip completely
-        if (isComment) continue;
-
-        // Process real delta content
-        if (jsonData) {
-          const content = jsonData.choices?.[0]?.delta?.content;
-          if (content) {
-            accumulatedAIResponse += content;
-            updateTileResponseContent(tileId, content, true);
-          }
-          // Ignore tool_calls etc. silently
-        }
+  closeFullscreen() {
+    if (this.isEditMode && this.fullscreenId) {
+      const pair = this.pairs.find(p => p.id === this.fullscreenId);
+      if (pair) {
+        pair.question = document.getElementById('fsQuestion').innerText.trim();
+        pair.response = document.getElementById('fsResponse').innerHTML;
+        this.saveToStorage();
+        this.showNotice('Changes saved');
       }
+      this.isEditMode = false;
+      document.querySelectorAll('.fullscreen-split').forEach(b => b.style.display = 'none');
     }
-  } catch (err) {
-    console.error('Stream error', err);
-    updateTileResponseContent(tileId, `<p style="color:red">Stream error: ${escapeHTML(err.message || String(err))}</p>`, false);
-  } finally {
-    // Your existing finally block (fallback cleanup)
-    fullscreenOverlay.classList.remove('streaming');
-    if (accumulatedAIResponse) {
-      // ... same cleanup as above ...
-    }
-    updateCardMinHeight();
+    document.getElementById('fullscreenOverlay').classList.remove('active', 'flipped');
+    this.fullscreenId = null;
+    document.body.style.overflow = 'auto';
   }
-}
-// API fetch
-async function apiFetch(path, payload) {
-  const base = getBaseUrl();
-  if (!base) throw new Error('API Base URL not set.');
 
-  const url = base + path;
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload)
-  });
+  getBaseUrl() {
+    const url = localStorage.getItem('ai-baseurl');
+    if (!url) throw new Error('Set and save API URL in ⚙️ menu');
+    return url.replace(/\/+$/, '');
+  }
 
-  if (!res.ok) {
-    let msg = `HTTP ${res.status}`;
+  async sendMessage() {
+    const input = document.getElementById('userInput').value.trim();
+    if (!input) return;
+    document.getElementById('userInput').value = '';
+
+    const id = this.addPair({ question: input, response: '...' }, true);
+    this.currentStreamingId = id;
+
     try {
-      const j = await res.json();
-      msg = j.error || j.message || JSON.stringify(j);
-    } catch {}
-    throw new Error(msg);
+      document.getElementById('loading').classList.add('show');
+      const mode = document.getElementById('modeSelect').value;
+      const payload = { sessionId: this.sessionId };
+      payload[mode === 'chat' ? 'message' : 'prompt'] = input;
+
+      const path = mode === 'code' ? '/api/code' : mode === 'generate' ? '/api/generate' : '/api/chat';
+      const reader = await this.apiFetch(path, payload);
+      await this.processSSEStream(reader, id);
+    } catch (err) {
+      this.updateResponse(id, `<p style="color:red">Error: ${this.escapeHTML(err.message)}</p>`);
+    } finally {
+      document.getElementById('loading').classList.remove('show');
+      this.currentStreamingId = null;
+    }
   }
 
-  if (res.body && typeof res.body.getReader === 'function') {
+  async apiFetch(path, payload) {
+    const base = this.getBaseUrl();
+    const res = await fetch(base + path, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    if (!res.ok) {
+      let msg = `HTTP ${res.status}`;
+      try { const j = await res.json(); msg = j.error || j.message || msg; } catch {}
+      throw new Error(msg);
+    }
     return res.body.getReader();
   }
 
-  const text = await res.text().catch(() => '');
-  const enc = new TextEncoder();
-  const chunk = enc.encode(text);
-  const stream = new ReadableStream({
-    start(ctrl) {
-      if (chunk && chunk.length) ctrl.enqueue(chunk);
-      ctrl.close();
-    }
-  });
+  async processSSEStream(reader, tileId) {
+    let buffer = '';
+    let accumulated = '';
 
-  return stream.getReader();
-}
-
-// Send message
-async function sendMessage() {
-  const input = (userInputElement.value || '').trim();
-  if (!input) return;
-
-  const mode = modeSelectElement.value || 'chat';
-  userInputElement.value = '';
-  loadingIndicator.classList.add('show');
-
-  try {
-    const payload = { sessionId };
-    if (mode === 'chat') {
-      payload.message = input;
-    } else {
-      payload.prompt = input;
-    }
-
-    const path = mode === 'code' ? '/api/code' : mode === 'generate' ? '/api/generate' : '/api/chat';
-
-    currentTileIdForStreaming = addPair({ question: input, response: '...' });
-
-    const reader = await apiFetch(path, payload);
-    await processSSEStream(reader, currentTileIdForStreaming);
-  } catch (err) {
-    const msg = err?.message ? err.message : String(err);
-
-    if (currentTileIdForStreaming) {
-      updateTileResponseContent(currentTileIdForStreaming, `<p style="color:red">Error: ${escapeHTML(msg)}</p>`, false);
-      const tile = pairs.find(x => x.id === currentTileIdForStreaming);
-      if (tile) tile.response = `Error: ${msg}`;
-      save();
-    } else {
-      alert(msg);
-    }
-  } finally {
-    loadingIndicator.classList.remove('show');
-    currentTileIdForStreaming = null;
-    updateCardMinHeight();
-  }
-}
-
-// Tile actions
-function deletePair(id) {
-  pairs = pairs.filter(p => p.id !== id);
-  const el = document.querySelector(`[data-id="${id}"]`);
-  if (el) el.remove();
-  save();
-
-  if (currentFullscreenTileId === id) {
-    hideFullscreen();
-  }
-}
-
-function copyResponse(id) {
-  const el = document.querySelector(`[data-id="${id}"] .card-back .response-content`);
-  const txt = el ? (el.textContent || '') : '';
-  navigator.clipboard.writeText(txt)
-    .then(() => showSavedNotice('Copied!'))
-    .catch(() => alert('Copy failed'));
-}
-
-function sendTileToAI(id) {
-  const tile = pairs.find(p => p.id === id);
-  if (!tile) return;
-
-  const resp = document.querySelector(`[data-id="${id}"] .card-back .response-content`)?.textContent || '';
-  userInputElement.value = `\( {tile.question}\n\n---\n\n \){resp.slice(0, 1000)}`;
-  userInputElement.focus();
-}
-
-// Fullscreen functions
-function showFullscreen(id) {
-  const tile = pairs.find(p => p.id === id);
-  if (!tile) return;
-
-  currentFullscreenTileId = id;
-
-  // Update all question text elements
-  fullscreenQuestionTexts.forEach(el => {
-    el.textContent = tile.question || '';
-  });
-
-  // Update response
-  fullscreenResponseContents.forEach(el => {
-    if (currentTileIdForStreaming === id && accumulatedAIResponse) {
-      el.textContent = accumulatedAIResponse;
-    } else {
-      el.innerHTML = tile.response ? safeRenderMarkdown(tile.response) : 'No response yet';
-    }
-    el.scrollTop = el.scrollHeight;
-  });
-
-  fullscreenCardInner.classList.add('flipped');
-  fullscreenOverlay.classList.add('show');
-  fullscreenOverlay.setAttribute('aria-hidden', 'false');
-
-  updateCardMinHeight();
-}
-
-function hideFullscreen() {
-  fullscreenOverlay.classList.remove('show');
-  fullscreenOverlay.classList.remove('streaming');
-  fullscreenOverlay.setAttribute('aria-hidden', 'true');
-  currentFullscreenTileId = null;
-  fullscreenCardInner.classList.remove('flipped');
-}
-
-function flipFullscreen() {
-  fullscreenCardInner.classList.toggle('flipped');
-}
-
-// Edit modal
-function showEditModal(id) {
-  editingTileId = id;
-  const tile = pairs.find(p => p.id === id);
-  if (!tile) return;
-
-  editTileIdDisplaySpan.textContent = `#${id.slice(0, 8)}`;
-  editQuestionTextarea.value = tile.question || '';
-  editResponseTextarea.value = tile.response || '';
-  editPreviewDiv.style.display = 'none';
-  editPreviewDiv.innerHTML = '';
-
-  editModal.classList.add('show');
-  editModal.setAttribute('aria-hidden', 'false');
-  hideFullscreen();
-}
-
-function closeEditModal() {
-  editingTileId = null;
-  editModal.classList.remove('show');
-  editModal.setAttribute('aria-hidden', 'true');
-}
-
-function saveEditedTile() {
-  if (!editingTileId) return closeEditModal();
-
-  const tile = pairs.find(p => p.id === editingTileId);
-  if (!tile) return closeEditModal();
-
-  tile.question = (editQuestionTextarea.value || '').trim();
-  tile.response = (editResponseTextarea.value || '').trim();
-
-  const card = gridElement.querySelector(`[data-id="${tile.id}"]`);
-  if (card) {
-    const questionDiv = card.querySelector('.card-front .question-div');
-    if (questionDiv) questionDiv.innerHTML = escapeHTML(tile.question);
-
-    const responseDiv = card.querySelector('.card-back .response-content');
-    if (responseDiv) responseDiv.innerHTML = safeRenderMarkdown(tile.response);
-  }
-
-  save();
-  showSavedNotice();
-  closeEditModal();
-
-  if (currentFullscreenTileId === tile.id) {
-    showFullscreen(tile.id); // Refresh fullscreen
-  }
-}
-
-function toggleEditPreview() {
-  if (editPreviewDiv.style.display === 'none') {
-    editPreviewDiv.innerHTML = safeRenderMarkdown(editResponseTextarea.value);
-    editPreviewDiv.style.display = 'block';
-    editTogglePreviewBtn.textContent = 'Hide Preview';
-  } else {
-    editPreviewDiv.style.display = 'none';
-    editTogglePreviewBtn.textContent = 'Preview';
-  }
-}
-
-// Settings
-function showSettings() {
-  baseUrlInput.value = localStorage.getItem(STORAGE_BASEURL_KEY) || '';
-  sessionIdInput.value = sessionId;
-  settingsModal.classList.add('show');
-  settingsModal.setAttribute('aria-hidden', 'false');
-}
-
-function closeSettings() {
-  settingsModal.classList.remove('show');
-  settingsModal.setAttribute('aria-hidden', 'true');
-}
-
-function saveSettings() {
-  localStorage.setItem(STORAGE_BASEURL_KEY, (baseUrlInput.value || '').trim());
-  closeSettings();
-  showSavedNotice();
-}
-
-function exportData() {
-  const data = { pairs, history, sessionId };
-  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `mindmap-${new Date().toISOString().slice(0, 10)}.json`;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 500);
-}
-
-function importData(file) {
-  if (!file) return;
-
-  const reader = new FileReader();
-  reader.onload = e => {
     try {
-      const data = JSON.parse(e.target.result);
-      pairs = data.pairs || [];
-      history = data.history || [];
-      sessionId = data.sessionId || sessionId;
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
 
-      gridElement.innerHTML = '';
-      pairs.forEach(renderPair);
-      save();
-      showSavedNotice('Imported!');
+        buffer += this.textDecoder.decode(value, { stream: true });
+        const parts = buffer.split(/\r?\n\r?\n/);
+        buffer = parts.pop() || '';
+
+        for (const part of parts) {
+          if (!part.trim()) continue;
+          const lines = part.split(/\r?\n/);
+          let jsonData = null;
+
+          for (const line of lines) {
+            if (line.startsWith('data:')) {
+              const data = line.substring(5).trim();
+              if (data === '[DONE]') {
+                let clean = accumulated.trim();
+                clean = clean.replace(/\n{3,}/g, '\n\n').trim();
+                const html = clean ? this.safeRenderMarkdown(clean) : '<em>No content</em>';
+                this.updateResponse(tileId, html);
+                const tile = this.pairs.find(t => t.id === tileId);
+                if (tile) tile.response = clean;
+                this.saveToStorage();
+                return;
+              }
+              try { jsonData = JSON.parse(data); } catch {}
+            }
+          }
+
+          if (jsonData?.choices?.[0]?.delta?.content) {
+            const content = jsonData.choices[0].delta.content;
+            accumulated += content;
+            this.updateResponse(tileId, this.safeRenderMarkdown(accumulated), true);
+          }
+        }
+      }
     } catch (err) {
-      alert('Invalid file: ' + (err.message || err));
+      this.updateResponse(tileId, `<p style="color:red">Error: ${this.escapeHTML(err.message)}</p>`);
     }
-  };
-  reader.readAsText(file);
-}
-
-// Storage
-function save() {
-  try {
-    localStorage.setItem(STORAGE_DATA_KEY, JSON.stringify({ pairs, history, sessionId }));
-  } catch (e) {
-    console.warn('Failed to save:', e);
   }
-}
 
-function load() {
-  try {
-    const raw = localStorage.getItem(STORAGE_DATA_KEY);
+  updateResponse(tileId, html, isStreaming = false) {
+    const card = document.querySelector(`[data-id="${tileId}"]`);
+    if (card) {
+      const resp = card.querySelector('.response-content');
+      if (resp) {
+        resp.innerHTML = html;
+        resp.scrollTop = resp.scrollHeight;
+      }
+    }
+    if (this.fullscreenId === tileId) {
+      const fs = document.getElementById('fsResponse');
+      if (fs) {
+        fs.innerHTML = html;
+        fs.scrollTop = fs.scrollHeight;
+      }
+    }
+  }
+
+  addPair(pairData, fullscreen = false) {
+    const id = crypto.randomUUID?.() || Date.now().toString();
+    const pair = { id, question: pairData.question, response: pairData.response || '' };
+    this.pairs.push(pair);
+
+    this.renderPair(pair, true);
+
+    if (fullscreen) this.openFullscreen(id, true);
+
+    this.saveToStorage();
+    return id;
+  }
+
+  renderPair(p, isNew = false) {
+    const responseHTML = p.response && p.response !== '...'
+      ? this.safeRenderMarkdown(p.response)
+      : '<div class="streaming-indicator"><span class="streaming-cursor"></span> Generating...</div>';
+
+    const card = document.createElement('div');
+    card.className = `flip-card ${isNew ? 'new-arrival' : ''}`;
+    card.dataset.id = p.id;
+
+    card.innerHTML = `
+      <div class="flip-card-inner">
+        <div class="card-face card-front">
+          <div class="question-div">${this.safeRenderMarkdown(p.question)}</div>
+        </div>
+        <div class="card-face card-back">
+          <div class="response-content">${responseHTML}</div>
+        </div>
+      </div>
+    `;
+
+    let longPressTimer;
+    card.addEventListener('touchstart', e => {
+      if (e.touches.length === 1) {
+        longPressTimer = setTimeout(() => this.enterSelectMode(p.id, card), 600);
+      }
+    }, { passive: true });
+    card.addEventListener('touchend', () => clearTimeout(longPressTimer));
+    card.addEventListener('touchmove', () => clearTimeout(longPressTimer));
+
+    card.addEventListener('touchstart', e => {
+      if (e.touches.length === 2) {
+        e.preventDefault();
+        this.currentCardMenuId = p.id;
+        document.getElementById('cardMenu').classList.add('active');
+      }
+    });
+
+    card.addEventListener('click', e => {
+      if (this.isSelectMode) {
+        e.preventDefault();
+        this.toggleCardSelection(p.id, card);
+        return;
+      }
+      card.classList.toggle('flipped');
+    });
+
+    card.ondblclick = e => { e.preventDefault(); this.openFullscreen(p.id); };
+
+    document.getElementById('grid').appendChild(card);
+    if (p.response && p.response !== '...') setTimeout(() => card.classList.add('flipped'), 100);
+  }
+
+  async summarizeContext() {
+    if (this.pairs.length < 3) {
+      this.showNotice('Need at least 3 cards to summarize');
+      return;
+    }
+
+    try {
+      document.getElementById('loading').textContent = '📊 Summarizing context...';
+      document.getElementById('loading').classList.add('show');
+
+      const recentCards = this.pairs.slice(-10); // Last 10 cards for summary
+      const contextText = recentCards.map((card, i) => 
+        `Card ${i + 1}: ${card.question}\n${card.response || 'No response yet'}\n`
+      ).join('\n---\n\n');
+
+      const summaryPrompt = `You are an expert knowledge manager. Please create a concise, thematic summary that captures the key insights, patterns, and main ideas from these recent thoughts and responses. Focus on connections and overarching themes:
+
+${contextText}
+
+Provide a summary that:
+1. Identifies the main themes
+2. Notes key insights or patterns
+3. Suggests potential next directions
+4. Is concise but comprehensive
+
+Summary:`;
+
+      const reader = await this.apiFetch('/api/chat', {
+        sessionId: this.sessionId,
+        message: summaryPrompt
+      });
+
+      let summaryContent = '';
+      const finalSummary = await this.processSummaryStream(reader, (content) => {
+        summaryContent += content;
+      });
+
+      // Create summary card
+      this.addPair({
+        question: `📊 Summary of ${recentCards.length} recent cards`,
+        response: finalSummary || summaryContent
+      });
+
+      this.showNotice(`Context summarized! Created summary card`);
+      
+    } catch (err) {
+      this.showNotice(`Summarization failed: ${err.message}`, 'error');
+    } finally {
+      document.getElementById('loading').classList.remove('show');
+    }
+  }
+
+  async processSummaryStream(reader, onContent) {
+    let buffer = '';
+    let summary = '';
+
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += this.textDecoder.decode(value, { stream: true });
+        const parts = buffer.split(/\r?\n\r?\n/);
+        buffer = parts.pop() || '';
+
+        for (const part of parts) {
+          if (!part.trim()) continue;
+          
+          const lines = part.split(/\r?\n/);
+          for (const line of lines) {
+            if (line.startsWith('data:')) {
+              const data = line.substring(5).trim();
+              if (data === '[DONE]') {
+                return summary.trim();
+              }
+              
+              try {
+                const jsonData = JSON.parse(data);
+                if (jsonData?.choices?.[0]?.delta?.content) {
+                  const content = jsonData.choices[0].delta.content;
+                  summary += content;
+                  onContent(content);
+                }
+              } catch {}
+            }
+          }
+        }
+      }
+    } catch (err) {
+      throw new Error(`Summary stream error: ${err.message}`);
+    }
+
+    return summary.trim();
+  }
+
+  promptMerge() {
+    if (this.selectedTiles.size < 2) return;
+    document.getElementById('mergePromptText').value = '';
+    document.getElementById('mergePromptModal').classList.add('active');
+  }
+
+  mergeSelectedTiles() {
+    const selected = this.pairs.filter(p => this.selectedTiles.has(p.id));
+    let context = selected.map(t => t.question).join('\n\n');
+    const customPrompt = document.getElementById('mergePromptText').value.trim();
+    const prompt = customPrompt || `Combine these ideas intelligently:\n\n${context}\n\nCreate a synthesized response that integrates all perspectives:`;
+    const newId = this.addPair({ question: `Merged ${selected.length} cards`, response: '...' }, true);
+    this.currentStreamingId = newId;
+    this.sendWithPrompt(prompt);
+    document.getElementById('mergePromptModal').classList.remove('active');
+    this.exitSelectMode();
+  }
+
+  async sendWithPrompt(prompt) {
+    try {
+      document.getElementById('loading').classList.add('show');
+      const mode = document.getElementById('modeSelect').value;
+      const payload = { sessionId: this.sessionId };
+      payload[mode === 'chat' ? 'message' : 'prompt'] = prompt;
+      const path = mode === 'code' ? '/api/code' : mode === 'generate' ? '/api/generate' : '/api/chat';
+      const reader = await this.apiFetch(path, payload);
+      await this.processSSEStream(reader, this.currentStreamingId);
+    } catch (err) {
+      this.updateResponse(this.currentStreamingId, `<p style="color:red">Error: ${this.escapeHTML(err.message)}</p>`);
+    } finally {
+      document.getElementById('loading').classList.remove('show');
+    }
+  }
+
+  openSplit(id) {
+    const p = this.pairs.find(x => x.id === id);
+    if (p) {
+      document.getElementById('splitText').value = p.response || '';
+      document.getElementById('splitModal').classList.add('active');
+      this.currentSplitId = id;
+    }
+  }
+
+  performSplit() {
+    const text = document.getElementById('splitText').value;
+    const parts = text.split(/\n?---+\n?/).map(t => t.trim()).filter(t => t);
+    
+    if (parts.length < 2) {
+      alert('Use --- to separate sections (need at least 2 parts)');
+      return;
+    }
+
+    // If splitting from existing card, get the original question
+    const orig = this.currentSplitId ? this.pairs.find(x => x.id === this.currentSplitId) : null;
+    const baseQuestion = orig ? orig.question : 'Split card';
+
+    parts.forEach((part, i) => {
+      this.addPair({ 
+        question: `${baseQuestion} - Part ${i + 1}`, 
+        response: part 
+      });
+    });
+
+    document.getElementById('splitModal').classList.remove('active');
+    this.currentSplitId = null;
+  }
+
+  deletePair(id) {
+    this.pairs = this.pairs.filter(p => p.id !== id);
+    document.querySelector(`[data-id="${id}"]`)?.remove();
+    if (this.fullscreenId === id) this.closeFullscreen();
+    this.saveToStorage();
+  }
+
+  enterSelectMode(id, card) {
+    this.isSelectMode = true;
+    this.selectedTiles.clear();
+    this.toggleCardSelection(id, card);
+  }
+
+  toggleCardSelection(id, card) {
+    card.classList.toggle('selected');
+    if (this.selectedTiles.has(id)) this.selectedTiles.delete(id);
+    else this.selectedTiles.add(id);
+    this.updateSelectionBar();
+  }
+
+  updateSelectionBar() {
+    const count = this.selectedTiles.size;
+    document.getElementById('selectCount').textContent = `${count} selected`;
+    document.getElementById('mergeSelected').style.display = count >= 2 ? 'block' : 'none';
+    document.getElementById('selectionBar').classList.toggle('active', count > 0);
+  }
+
+  exitSelectMode() {
+    this.isSelectMode = false;
+    this.selectedTiles.clear();
+    document.querySelectorAll('.flip-card.selected').forEach(c => c.classList.remove('selected'));
+    document.getElementById('selectionBar').classList.remove('active');
+  }
+
+  exportState() {
+    const state = { 
+      pairs: this.pairs, 
+      sessionId: this.sessionId,
+      exportDate: new Date().toISOString(),
+      version: 2
+    };
+    const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `ai-cards-${Date.now()}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    this.showNotice('Exported successfully!');
+  }
+
+  importState(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      try {
+        const state = JSON.parse(ev.target.result);
+        if (!state.pairs || !Array.isArray(state.pairs)) {
+          throw new Error('Invalid file format');
+        }
+        
+        this.pairs = state.pairs || [];
+        this.sessionId = state.sessionId || this.sessionId;
+        document.getElementById('grid').innerHTML = '';
+        this.pairs.forEach(p => this.renderPair(p));
+        this.saveToStorage();
+        this.showNotice('Imported successfully!');
+      } catch (err) {
+        alert(`Import failed: ${err.message}`);
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  }
+
+  saveToStorage() {
+    localStorage.setItem('ai-data', JSON.stringify({ 
+      pairs: this.pairs, 
+      sessionId: this.sessionId 
+    }));
+  }
+
+  loadFromStorage() {
+    const raw = localStorage.getItem('ai-data');
     if (raw) {
-      const data = JSON.parse(raw);
-      pairs = data.pairs || [];
-      history = data.history || [];
-      sessionId = data.sessionId || sessionId;
-      pairs.forEach(renderPair);
-    }
-  } catch (e) {
-    console.warn('Failed to load:', e);
-  }
-
-  const savedUrl = localStorage.getItem(STORAGE_BASEURL_KEY);
-  if (savedUrl) baseUrlInput.value = savedUrl;
-
-  const savedHeight = localStorage.getItem(STORAGE_DIVIDER_HEIGHT_KEY);
-  if (savedHeight && parseFloat(savedHeight) > 2) {
-    applyInputPanelHeight(parseFloat(savedHeight));
-  } else {
-    applyInputPanelHeight(200);
-  }
-
-  updateCardMinHeight();
-}
-
-// Panel resize
-function applyInputPanelHeight(height) {
-  const maxHeight = window.innerHeight * 0.8;
-  const newHeight = Math.max(0, Math.min(height || 0, maxHeight));
-
-  if (newHeight <= 2) {
-    inputPanelElement.style.height = '0px';
-    inputPanelElement.style.opacity = '0';
-    inputPanelElement.style.overflow = 'hidden';
-  } else {
-    inputPanelElement.style.height = newHeight + 'px';
-    inputPanelElement.style.opacity = '1';
-    inputPanelElement.style.overflow = 'auto';
-  }
-
-  updateCardMinHeight();
-}
-
-let resizing = false;
-let startY = 0;
-let startHeight = 0;
-
-resizeDivider.addEventListener('mousedown', e => {
-  resizing = true;
-  startY = e.clientY;
-  startHeight = inputPanelElement.getBoundingClientRect().height;
-  document.body.style.userSelect = 'none';
-});
-
-document.addEventListener('mousemove', e => {
-  if (!resizing) return;
-  const delta = e.clientY - startY;
-  applyInputPanelHeight(startHeight + delta);
-});
-
-document.addEventListener('mouseup', () => {
-  if (resizing) {
-    resizing = false;
-    document.body.style.userSelect = '';
-    const currentHeight = inputPanelElement.getBoundingClientRect().height;
-    localStorage.setItem(STORAGE_DIVIDER_HEIGHT_KEY, currentHeight);
-  }
-});
-
-resizeDivider.addEventListener('touchstart', e => {
-  const touch = e.touches[0];
-  resizing = true;
-  startY = touch.clientY;
-  startHeight = inputPanelElement.getBoundingClientRect().height;
-}, { passive: false });
-
-document.addEventListener('touchmove', e => {
-  if (!resizing) return;
-  const touch = e.touches[0];
-  const delta = touch.clientY - startY;
-  applyInputPanelHeight(startHeight + delta);
-}, { passive: false });
-
-document.addEventListener('touchend', () => {
-  if (resizing) {
-    resizing = false;
-    const currentHeight = inputPanelElement.getBoundingClientRect().height;
-    localStorage.setItem(STORAGE_DIVIDER_HEIGHT_KEY, currentHeight);
-  }
-});
-
-resizeDivider.addEventListener('dblclick', () => {
-  const currentHeight = inputPanelElement.getBoundingClientRect().height;
-  if (currentHeight <= 2) {
-    applyInputPanelHeight(200);
-  } else {
-    applyInputPanelHeight(0);
-  }
-});
-
-// Event delegation
-document.addEventListener('click', e => {
-  const button = e.target.closest('[data-action]');
-  if (!button) return;
-
-  e.stopPropagation();
-  const action = button.dataset.action;
-  const id = button.dataset.id || button.closest('.flip-card')?.dataset.id;
-
-  switch (action) {
-    case 'show-fullscreen':
-      if (id) showFullscreen(id);
-      break;
-    case 'edit':
-      if (id) showEditModal(id);
-      break;
-    case 'delete':
-      if (id && confirm('Delete this tile?')) deletePair(id);
-      break;
-    case 'copy':
-      if (id) copyResponse(id);
-      break;
-    case 'followup':
-      if (id) sendTileToAI(id);
-      break;
-    case 'flip':
-      flipFullscreen();
-      break;
-    case 'close':
-      hideFullscreen();
-      break;
-  }
-});
-
-// UI listeners
-document.getElementById('logoBtn').addEventListener('click', () => location.reload());
-document.getElementById('settingsOpenBtn').addEventListener('click', showSettings);
-document.getElementById('runTestsBtn').addEventListener('click', () => {
-  try {
-    const id = addPair({ question: 'self-test', response: 'ok' });
-    if (!document.querySelector(`[data-id="${id}"]`)) throw new Error('render failed');
-    deletePair(id);
-    if (document.querySelector(`[data-id="${id}"]`)) throw new Error('delete failed');
-    alert('✓ Self-tests passed');
-  } catch (e) {
-    alert('✖ Self-test failed: ' + e.message);
-    console.error(e);
-  }
-});
-
-document.getElementById('settingsSaveBtn').addEventListener('click', saveSettings);
-document.getElementById('settingsCancelBtn').addEventListener('click', closeSettings);
-document.getElementById('exportBtn').addEventListener('click', exportData);
-document.getElementById('importFile').addEventListener('change', e => {
-  const file = e.target.files?.[0];
-  if (file) importData(file);
-  e.target.value = '';
-});
-
-document.getElementById('sendBtn').addEventListener('click', sendMessage);
-document.getElementById('editSaveBtn').addEventListener('click', saveEditedTile);
-document.getElementById('editCancelBtn').addEventListener('click', closeEditModal);
-document.getElementById('editTogglePreview').addEventListener('click', toggleEditPreview);
-
-document.getElementById('composeOpenBtn').addEventListener('click', () => {
-  composeInput.value = userInputElement.value || '';
-  composeModal.classList.add('show');
-  composeModal.setAttribute('aria-hidden', 'false');
-});
-document.getElementById('composeCancelBtn').addEventListener('click', () => {
-  composeModal.classList.remove('show');
-  composeModal.setAttribute('aria-hidden', 'true');
-});
-document.getElementById('composeSendBtn').addEventListener('click', () => {
-  userInputElement.value = composeInput.value;
-  composeModal.classList.remove('show');
-  composeModal.setAttribute('aria-hidden', 'true');
-  sendMessage();
-});
-
-// Close modals on outside click
-document.addEventListener('click', e => {
-  if (e.target === settingsModal) closeSettings();
-  if (e.target === editModal) closeEditModal();
-  if (e.target === fullscreenOverlay) hideFullscreen();
-  if (e.target === composeModal) {
-    composeModal.classList.remove('show');
-    composeModal.setAttribute('aria-hidden', 'true');
-  }
-});
-
-// Keyboard shortcuts
-document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') {
-    if (fullscreenOverlay.classList.contains('show')) hideFullscreen();
-    else if (editModal.classList.contains('show')) closeEditModal();
-    else if (settingsModal.classList.contains('show')) closeSettings();
-    else if (composeModal.classList.contains('show')) {
-      composeModal.classList.remove('show');
-      composeModal.setAttribute('aria-hidden', 'true');
+      try {
+        const data = JSON.parse(raw);
+        this.pairs = data.pairs || [];
+        this.sessionId = data.sessionId || this.sessionId;
+        this.pairs.forEach(p => this.renderPair(p));
+      } catch (err) {
+        console.error('Failed to load data:', err);
+        this.pairs = [];
+      }
     }
   }
 
-  if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
-    if (document.activeElement === userInputElement || document.activeElement === composeInput) {
-      e.preventDefault();
-      sendMessage();
+  escapeHTML(str = '') {
+    return str.replace(/&/g, '&amp;')
+              .replace(/</g, '&lt;')
+              .replace(/>/g, '&gt;')
+              .replace(/"/g, '&quot;')
+              .replace(/'/g, '&#039;');
+  }
+
+  safeRenderMarkdown(md) {
+    try {
+      const html = marked.parse(md || '');
+      return DOMPurify.sanitize(html);
+    } catch (e) {
+      return this.escapeHTML(md || '');
     }
   }
-});
 
-function showSavedNotice(text = 'Saved!') {
-  savedNotice.textContent = text;
-  savedNotice.classList.add('show');
-  setTimeout(() => savedNotice.classList.remove('show'), 2000);
+  showNotice(msg, type = 'success') {
+    const n = document.getElementById('savedNotice');
+    n.textContent = msg;
+    n.style.background = type === 'error' ? '#d00' : '#333';
+    n.classList.add('show');
+    setTimeout(() => n.classList.remove('show'), 2000);
+  }
 }
 
-// Initialize
-load();
-
-window.MindMap = { addPair, pairs };
-</script>
-<script>
-// Force reliable card height and text visibility on load
 document.addEventListener('DOMContentLoaded', () => {
-  // Ensure every card has enough height
-  document.querySelectorAll('.flip-card').forEach(card => {
-    card.style.minHeight = '220px';
-  });
-
-  // Force question text to show (color, overflow, size)
-  document.querySelectorAll('.question-div').forEach(div => {
-    div.style.overflow = 'hidden';           // Safe truncation
-    div.style.color = '#fff';                // Hard-code white text
-    div.style.fontSize = '1rem';
-    div.style.lineHeight = '1.5';
-    div.style.display = '-webkit-box';
-    div.style.webkitLineClamp = '10';
-    div.style.webkitBoxOrient = 'vertical';
-    div.style.textOverflow = 'ellipsis';
-  });
-});
-// Force re-render all cards on load to guarantee text shows
-window.addEventListener('load', () => {
-  gridElement.innerHTML = '';
-  pairs.forEach(renderPair);
+  window.aiCardSystem = new AICardSystem();
+  aiCardSystem.init();
 });
 </script>
 </body>
