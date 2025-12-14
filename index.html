@@ -49,7 +49,6 @@
     padding: 16px;
     padding-top: 70px;
     padding-bottom: 120px;
-    transition: padding-bottom 0.3s ease;
   }
 
   .flip-card {
@@ -80,243 +79,9 @@
   #savedNotice { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); background: #333; color: white; padding: 12px 24px; border-radius: 25px; opacity: 0; transition: opacity 0.3s; }
   #savedNotice.show { opacity: 1; }
 
-  /* Enhanced Input Panel Styles */
-  #inputPanel {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    background: rgba(255, 255, 255, 0.98);
-    border-top: 1px solid rgba(0, 0, 0, 0.08);
-    padding: 16px 16px max(16px, env(safe-area-inset-bottom));
-    backdrop-filter: blur(20px) saturate(180%);
-    -webkit-backdrop-filter: blur(20px) saturate(180%);
-    box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.06);
-    z-index: 800;
-    transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
-    border-radius: 24px 24px 0 0;
-  }
+  #inputPanel { position: fixed; bottom: 0; left: 0; right: 0; background: rgba(255,255,255,0.95); border-top: 1px solid #ddd; padding: 16px; backdrop-filter: blur(20px); box-shadow: 0 -2px 10px rgba(0,0,0,0.1); }
+  .input-container { display: flex; gap: 10px; align-items: center; max-width: 1200px; margin: 0 auto; }
 
-  #inputPanel.collapsed {
-    transform: translateY(calc(100% - 60px));
-    background: rgba(255, 255, 255, 0.85);
-  }
-
-  /* Collapse Toggle Button */
-  .collapse-toggle {
-    position: absolute;
-    top: -40px;
-    left: 50%;
-    transform: translateX(-50%);
-    background: rgba(255, 255, 255, 0.95);
-    border: 1px solid rgba(0, 0, 0, 0.08);
-    border-bottom: none;
-    border-radius: 16px 16px 0 0;
-    width: 60px;
-    height: 40px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    color: #666;
-    font-size: 18px;
-    transition: all 0.3s ease;
-    z-index: 1;
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.05);
-  }
-
-  .collapse-toggle:hover {
-    background: rgba(255, 255, 255, 1);
-    color: #0066ff;
-  }
-
-  .collapse-toggle.collapsed .expand-icon {
-    display: block;
-  }
-
-  .collapse-toggle.collapsed .collapse-icon {
-    display: none;
-  }
-
-  .collapse-toggle .expand-icon {
-    display: none;
-  }
-
-  .collapse-toggle .collapse-icon {
-    display: block;
-    transform: rotate(0deg);
-    transition: transform 0.3s ease;
-  }
-
-  .collapse-toggle:hover .collapse-icon {
-    transform: rotate(180deg);
-  }
-
-  /* Enhanced Input Container */
-  .input-container {
-    display: flex;
-    gap: 12px;
-    align-items: center;
-    max-width: 1200px;
-    margin: 0 auto;
-    position: relative;
-  }
-
-  /* Style for Mode Select */
-  #modeSelect {
-    padding: 12px 16px;
-    border: 1px solid rgba(0, 102, 255, 0.1);
-    border-radius: 14px;
-    background: rgba(0, 102, 255, 0.03);
-    font-size: 15px;
-    font-weight: 500;
-    color: #0066ff;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    min-width: 120px;
-    appearance: none;
-    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%230066ff'%3e%3cpath d='M7 10l5 5 5-5z'/%3e%3c/svg%3e");
-    background-repeat: no-repeat;
-    background-position: right 16px center;
-    background-size: 16px;
-    padding-right: 44px;
-  }
-
-  #modeSelect:hover {
-    background-color: rgba(0, 102, 255, 0.05);
-    border-color: rgba(0, 102, 255, 0.2);
-  }
-
-  #modeSelect:focus {
-    outline: none;
-    border-color: #0066ff;
-    box-shadow: 0 0 0 3px rgba(0, 102, 255, 0.1);
-  }
-
-  /* Enhanced Input Field */
-  #userInput {
-    flex: 1;
-    padding: 16px 20px;
-    border: 2px solid rgba(0, 102, 255, 0.1);
-    border-radius: 16px;
-    font-size: 16px;
-    background: rgba(255, 255, 255, 0.9);
-    transition: all 0.3s ease;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-    line-height: 1.5;
-  }
-
-  #userInput:hover {
-    border-color: rgba(0, 102, 255, 0.2);
-    background: white;
-  }
-
-  #userInput:focus {
-    outline: none;
-    border-color: #0066ff;
-    background: white;
-    box-shadow: 0 4px 16px rgba(0, 102, 255, 0.15);
-  }
-
-  #userInput::placeholder {
-    color: rgba(0, 0, 0, 0.4);
-    font-weight: 400;
-  }
-
-  /* Enhanced Send Button */
-  #sendBtn {
-    background: linear-gradient(135deg, #0066ff, #0052d4);
-    color: white;
-    border: none;
-    padding: 16px 28px;
-    border-radius: 14px;
-    cursor: pointer;
-    font-weight: 600;
-    font-size: 16px;
-    transition: all 0.3s ease;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    min-width: 120px;
-    box-shadow: 0 4px 12px rgba(0, 102, 255, 0.25);
-    position: relative;
-    overflow: hidden;
-  }
-
-  #sendBtn::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: -100%;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-    transition: left 0.6s ease;
-  }
-
-  #sendBtn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 20px rgba(0, 102, 255, 0.35);
-  }
-
-  #sendBtn:hover::before {
-    left: 100%;
-  }
-
-  #sendBtn:active {
-    transform: translateY(0);
-    box-shadow: 0 2px 8px rgba(0, 102, 255, 0.25);
-  }
-
-  #sendBtn:disabled {
-    background: #ccc;
-    cursor: not-allowed;
-    transform: none;
-    box-shadow: none;
-  }
-
-  /* Send Button Icon */
-  #sendBtn::after {
-    content: '↗';
-    font-size: 18px;
-    font-weight: 300;
-  }
-
-  /* Enhanced Focus States */
-  #inputPanel:not(.collapsed) .input-container {
-    animation: slideUp 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
-  }
-
-  @keyframes slideUp {
-    from {
-      opacity: 0;
-      transform: translateY(20px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
-
-  /* Character Counter */
-  .char-counter {
-    position: absolute;
-    bottom: -24px;
-    right: 0;
-    font-size: 12px;
-    color: rgba(0, 0, 0, 0.4);
-    opacity: 0;
-    transition: opacity 0.3s ease;
-  }
-
-  #userInput:focus ~ .char-counter {
-    opacity: 1;
-  }
-
-  /* Original modal and menu styles */
   #moreMenuBtn { position: fixed; bottom: 120px; right: 20px; background: rgba(255,255,255,0.9); border: 1px solid #ddd; width: 56px; height: 56px; border-radius: 50%; font-size: 28px; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.1); z-index: 900; }
   #moreModal { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 1000; backdrop-filter: blur(5px); }
   #moreModal.active { display: flex; }
@@ -357,7 +122,7 @@
 <body>
 
 <div id="selectionBar">
-  <button id="cancelSelect">🗙</button>
+  <button id="cancelSelect"></button>
   <span id="selectCount">1 selected</span>
   <button id="mergeSelected">Merge</button>
 </div>
@@ -369,8 +134,8 @@
         <div class="fullscreen-header">
           <span class="fullscreen-title">Question</span>
           <div>
-            <button class="fullscreen-flip" title="Flip to Response">↻</button>
-            <button class="fullscreen-split" style="display:none;" title="Split">✂️</button>
+            <button class="fullscreen-flip" title="Flip to Response"></button>
+            <button class="fullscreen-split" style="display:none;" title="Split"></button>
             <button class="fullscreen-close" title="Close">×</button>
           </div>
         </div>
@@ -380,8 +145,8 @@
         <div class="fullscreen-header">
           <span class="fullscreen-title">Response</span>
           <div>
-            <button class="fullscreen-flip" title="Flip to Question">↻</button>
-            <button class="fullscreen-split" style="display:none;" title="Split">✂️</button>
+            <button class="fullscreen-flip" title="Flip to Question"></button>
+            <button class="fullscreen-split" style="display:none;" title="Split"></button>
             <button class="fullscreen-close" title="Close">×</button>
           </div>
         </div>
@@ -393,36 +158,36 @@
 
 <div id="grid"></div>
 
-<div id="loading">🤔 Thinking...</div>
-<div id="savedNotice">💾 Saved!</div>
+<div id="loading"> Thinking...</div>
+<div id="savedNotice"> Saved!</div>
 
-<button id="moreMenuBtn">⚙️</button>
+<button id="moreMenuBtn"></button>
 
 <div id="moreModal">
   <div class="modal-content">
     <h3>Settings & Actions</h3>
     <input type="url" id="modalBaseUrl" placeholder="API Base URL" style="width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ddd; border-radius: 8px;">
-    <button id="saveApiBtn">💾 Save API URL</button>
+    <button id="saveApiBtn"> Save API URL</button>
     
     <div style="margin-top: 24px; border-top: 1px solid #eee; padding-top: 16px;">
-      <button class="modal-btn" id="modalExport" style="width: 100%; padding: 12px; margin: 6px 0; border: 1px solid #ddd; border-radius: 8px; background: white; cursor: pointer; font-size: 16px;">📤 Export State</button>
-      <button class="modal-btn" id="modalImport" style="width: 100%; padding: 12px; margin: 6px 0; border: 1px solid #ddd; border-radius: 8px; background: white; cursor: pointer; font-size: 16px;">📥 Import State</button>
-      <button class="modal-btn" id="modalSummarize" style="width: 100%; padding: 12px; margin: 6px 0; border: 1px solid #ddd; border-radius: 8px; background: white; cursor: pointer; font-size: 16px;">📊 Summarize Context</button>
+      <button class="modal-btn" id="modalExport" style="width: 100%; padding: 12px; margin: 6px 0; border: 1px solid #ddd; border-radius: 8px; background: white; cursor: pointer; font-size: 16px;"> Export State</button>
+      <button class="modal-btn" id="modalImport" style="width: 100%; padding: 12px; margin: 6px 0; border: 1px solid #ddd; border-radius: 8px; background: white; cursor: pointer; font-size: 16px;"> Import State</button>
+      <button class="modal-btn" id="modalSummarize" style="width: 100%; padding: 12px; margin: 6px 0; border: 1px solid #ddd; border-radius: 8px; background: white; cursor: pointer; font-size: 16px;"> Summarize Context</button>
     </div>
     
-    <button class="modal-btn" id="modalClose" style="width: 100%; padding: 12px; margin: 6px 0; border: 1px solid #ddd; border-radius: 8px; background: #f8f9fa; cursor: pointer; font-size: 16px;">✕ Close</button>
+    <button class="modal-btn" id="modalClose" style="width: 100%; padding: 12px; margin: 6px 0; border: 1px solid #ddd; border-radius: 8px; background: #f8f9fa; cursor: pointer; font-size: 16px;"> Close</button>
     
     <input type="file" id="fileInput" accept=".json" style="display:none;">
   </div>
 </div>
 
 <div id="cardMenu" class="card-menu">
-  <button class="menu-btn" data-action="continue">↪️ Continue</button>
-  <button class="menu-btn" data-action="copy">📋 Copy</button>
-  <button class="menu-btn" data-action="edit">✏️ Edit</button>
-  <button class="menu-btn" data-action="split">✂️ Split</button>
-  <button class="menu-btn" data-action="fullscreen">🔍 Fullscreen</button>
-  <button class="menu-btn" data-action="delete" style="color: #d00;">🗑 Delete</button>
+  <button class="menu-btn" data-action="continue"> Continue</button>
+  <button class="menu-btn" data-action="copy"> Copy</button>
+  <button class="menu-btn" data-action="edit"> Edit</button>
+  <button class="menu-btn" data-action="split"> Split</button>
+  <button class="menu-btn" data-action="fullscreen"> Fullscreen</button>
+  <button class="menu-btn" data-action="delete" style="color: #d00;"> Delete</button>
 </div>
 
 <div id="mergePromptModal">
@@ -461,24 +226,15 @@
   </div>
 </div>
 
-<!-- Enhanced Input Panel with Collapse Feature -->
 <div id="inputPanel">
-  <div class="collapse-toggle" id="collapseToggle">
-    <span class="collapse-icon">⌄</span>
-    <span class="expand-icon">⌃</span>
-  </div>
-  
   <div class="input-container">
-    <select id="modeSelect">
-      <option value="chat">🗨️ Chat</option>
-      <option value="generate">✨ Generate</option>
-      <option value="code">💻 Code</option>
+    <select id="modeSelect" style="padding: 10px 12px; border: 1px solid #ddd; border-radius: 8px; background: white;">
+      <option value="chat"> Chat</option>
+      <option value="generate"> Generate</option>
+      <option value="code"> Code</option>
     </select>
-    
-    <input type="text" id="userInput" placeholder="Ask anything..." autocomplete="off">
-    <span class="char-counter" id="charCounter">0/1000</span>
-    
-    <button id="sendBtn">Send</button>
+    <input type="text" id="userInput" placeholder="Ask anything..." style="flex: 1; padding: 12px 16px; border: 2px solid #e1e1e1; border-radius: 12px; font-size: 16px;">
+    <button id="sendBtn" style="background:#0066ff;color:white;border:none;padding:12px 20px;border-radius:10px;cursor:pointer;font-weight:600;"> Send</button>
   </div>
 </div>
 
@@ -499,83 +255,6 @@ class AICardSystem {
   init() {
     this.loadFromStorage();
     this.bindEvents();
-    this.initInputPanelCollapse(); // Initialize the collapse functionality
-  }
-
-  initInputPanelCollapse() {
-    const inputPanel = document.getElementById('inputPanel');
-    const collapseToggle = document.getElementById('collapseToggle');
-    const charCounter = document.getElementById('charCounter');
-    const userInput = document.getElementById('userInput');
-    const grid = document.getElementById('grid');
-
-    // Toggle collapse state
-    collapseToggle.addEventListener('click', function() {
-      inputPanel.classList.toggle('collapsed');
-      collapseToggle.classList.toggle('collapsed');
-      
-      // Adjust grid padding
-      if (inputPanel.classList.contains('collapsed')) {
-        grid.style.paddingBottom = '80px';
-      } else {
-        grid.style.paddingBottom = '120px';
-        // Focus input when expanded
-        setTimeout(() => userInput.focus(), 300);
-      }
-    });
-
-    // Character counter
-    userInput.addEventListener('input', function() {
-      const maxLength = 1000;
-      const currentLength = userInput.value.length;
-      charCounter.textContent = `${currentLength}/${maxLength}`;
-      
-      // Update color based on length
-      if (currentLength > maxLength * 0.9) {
-        charCounter.style.color = '#ff3b30';
-      } else if (currentLength > maxLength * 0.75) {
-        charCounter.style.color = '#ff9500';
-      } else {
-        charCounter.style.color = 'rgba(0, 0, 0, 0.4)';
-      }
-    });
-
-    // Keyboard shortcut to toggle input panel (Cmd/Ctrl + .)
-    document.addEventListener('keydown', function(e) {
-      if ((e.metaKey || e.ctrlKey) && e.key === '.') {
-        e.preventDefault();
-        collapseToggle.click();
-      }
-      
-      // Escape to collapse
-      if (e.key === 'Escape' && !inputPanel.classList.contains('collapsed')) {
-        collapseToggle.click();
-      }
-    });
-
-    // Auto-expand when focusing input (if collapsed)
-    userInput.addEventListener('focus', function() {
-      if (inputPanel.classList.contains('collapsed')) {
-        collapseToggle.click();
-      }
-    });
-
-    // Load saved panel state
-    const loadPanelState = () => {
-      const wasCollapsed = localStorage.getItem('inputPanelCollapsed') === 'true';
-      if (wasCollapsed) {
-        collapseToggle.click(); // Toggle to collapsed state
-      }
-    };
-
-    // Save panel state
-    const savePanelState = () => {
-      localStorage.setItem('inputPanelCollapsed', inputPanel.classList.contains('collapsed'));
-    };
-
-    // Load saved state on init
-    loadPanelState();
-    collapseToggle.addEventListener('click', savePanelState);
   }
 
   bindEvents() {
@@ -739,7 +418,7 @@ class AICardSystem {
 
   getBaseUrl() {
     const url = localStorage.getItem('ai-baseurl');
-    if (!url) throw new Error('Set and save API URL in ⚙️ menu');
+    if (!url) throw new Error('Set and save API URL in  menu');
     return url.replace(/\/+$/, '');
   }
 
@@ -920,7 +599,7 @@ class AICardSystem {
     }
 
     try {
-      document.getElementById('loading').textContent = '📊 Summarizing context...';
+      document.getElementById('loading').textContent = ' Summarizing context...';
       document.getElementById('loading').classList.add('show');
 
       const recentCards = this.pairs.slice(-10); // Last 10 cards for summary
@@ -952,7 +631,7 @@ Summary:`;
 
       // Create summary card
       this.addPair({
-        question: `📊 Summary of ${recentCards.length} recent cards`,
+        question: ` Summary of ${recentCards.length} recent cards`,
         response: finalSummary || summaryContent
       });
 
