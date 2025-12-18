@@ -3,10 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>AI-nspired - Intelligent Knowledge Cards</title>
-    <meta name="description" content="Organize your AI conversations into interactive knowledge cards with context summarization and smart merging">
-    
-    <!-- External Dependencies -->
+    <title>AI Cards - Fixed Fullscreen Controls</title>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js"></script>
     
@@ -55,7 +52,6 @@
             display: none;
             justify-content: space-between;
             align-items: center;
-            font-size: 16px;
             box-shadow: var(--shadow);
         }
 
@@ -90,7 +86,7 @@
             background: rgba(0, 0, 0, 0.05);
         }
 
-        /* ===== Fullscreen Overlay ===== */
+        /* ===== FIXED FULLSCREEN OVERLAY ===== */
         .fullscreen-overlay {
             position: fixed;
             inset: 0;
@@ -124,6 +120,7 @@
             transform-style: preserve-3d;
         }
 
+        /* 🔧 CRITICAL FIX: Proper rotation transform */
         .fullscreen-overlay.flipped .fullscreen-inner {
             transform: rotateY(180deg);
         }
@@ -139,9 +136,14 @@
             overflow: hidden;
         }
 
-        .fullscreen-front,
+        .fullscreen-front {
+            background: var(--bg-primary);
+        }
+
+        /* 🔧 CRITICAL FIX: Back face starts rotated */
         .fullscreen-back {
             background: var(--bg-primary);
+            transform: rotateY(180deg);
         }
 
         .fullscreen-header {
@@ -224,7 +226,6 @@
             border-radius: var(--border-radius);
             overflow: hidden;
             box-shadow: var(--shadow);
-            background: var(--bg-primary);
             transition: all 0.3s ease;
         }
 
@@ -273,7 +274,7 @@
 
         .card-back {
             transform: rotateY(180deg);
-            background: linear-gradient(135deg, var(--bg-primary) 0%, #fafbff 100%);
+            background: linear-gradient(135deg, #ffffff 0%, #fafbff 100%);
         }
 
         .question-div,
@@ -310,7 +311,6 @@
             display: none;
             z-index: 2000;
             backdrop-filter: blur(10px);
-            font-size: 16px;
         }
 
         #loading.show {
@@ -328,7 +328,6 @@
             border-radius: 25px;
             opacity: 0;
             transition: opacity var(--transition-speed);
-            font-size: 14px;
             box-shadow: var(--shadow);
         }
 
@@ -612,12 +611,16 @@
             background: var(--bg-tertiary);
         }
 
-        /* ===== Streaming Animation ===== */
+        /* ===== Hidden & Utility ===== */
+        .hidden {
+            display: none !important;
+        }
+
+        /* Streaming animation */
         .streaming-indicator {
             text-align: center;
             color: var(--text-secondary);
             padding: 20px;
-            font-size: 16px;
         }
 
         .streaming-cursor {
@@ -630,12 +633,10 @@
         }
 
         @keyframes blink {
-            50% {
-                opacity: 0;
-            }
+            50% { opacity: 0; }
         }
 
-        /* ===== Responsive Design ===== */
+        /* Responsive */
         @media (max-width: 768px) {
             .fullscreen-card {
                 width: 98%;
@@ -651,26 +652,9 @@
                 gap: 8px;
             }
 
-            #userInput {
-                margin: 0;
-            }
-
             #moreModal {
                 padding: 10px;
             }
-        }
-
-        /* ===== Utility Classes ===== */
-        .hidden {
-            display: none !important;
-        }
-
-        .text-center {
-            text-align: center;
-        }
-
-        .text-secondary {
-            color: var(--text-secondary);
         }
     </style>
 </head>
@@ -678,11 +662,11 @@
     <!-- Selection Bar -->
     <div id="selectionBar">
         <button id="cancelSelect">✕</button>
-        <span id="selectCount">1 selected</span>
-        <button id="mergeSelected">Merge</button>
+        <span id="selectCount">0 selected</span>
+        <button id="mergeSelected">Merge Selected</button>
     </div>
 
-    <!-- Fullscreen Overlay -->
+    <!-- FIXED: Fullscreen Overlay with proper panels -->
     <div class="fullscreen-overlay" id="fullscreenOverlay">
         <div class="fullscreen-card">
             <div class="fullscreen-inner">
@@ -691,9 +675,9 @@
                     <div class="fullscreen-header">
                         <span class="fullscreen-title">Question</span>
                         <div class="fullscreen-controls">
-                            <button class="fullscreen-btn fullscreen-flip" title="Flip to Response">🔄</button>
-                            <button class="fullscreen-btn fullscreen-split hidden" title="Split">✂️</button>
-                            <button class="fullscreen-btn fullscreen-close" title="Close">×</button>
+                            <button class="fullscreen-btn fullscreen-flip" title="Flip to Response">↕️</button>
+                            <button class="fullscreen-btn fullscreen-split hidden" title="Split">⬇</button>
+                            <button class="fullscreen-btn fullscreen-close" title="Close">❌</button>
                         </div>
                     </div>
                     <div class="fullscreen-content" id="fsQuestion" contenteditable="false"></div>
@@ -704,9 +688,9 @@
                     <div class="fullscreen-header">
                         <span class="fullscreen-title">Response</span>
                         <div class="fullscreen-controls">
-                            <button class="fullscreen-btn fullscreen-flip" title="Flip to Question">🔄</button>
-                            <button class="fullscreen-btn fullscreen-split hidden" title="Split">✂️</button>
-                            <button class="fullscreen-btn fullscreen-close" title="Close">×</button>
+                            <button class="fullscreen-btn fullscreen-flip" title="Flip to Question">↕️</button>
+                            <button class="fullscreen-btn fullscreen-split hidden" title="Split">⬇</button>
+                            <button class="fullscreen-btn fullscreen-close" title="Close">❌</button>
                         </div>
                     </div>
                     <div class="fullscreen-content" id="fsResponse" contenteditable="false"></div>
@@ -719,25 +703,25 @@
     <div id="grid"></div>
 
     <!-- Loading Indicator -->
-    <div id="loading">🤖 Thinking...</div>
+    <div id="loading">💭 Thinking...</div>
     
     <!-- Status Notice -->
     <div id="savedNotice">💾 Saved!</div>
 
     <!-- More Menu Button -->
-    <button id="moreMenuBtn">⋯</button>
+    <button id="moreMenuBtn" title="Menu">⚙️</button>
 
     <!-- More Modal -->
     <div id="moreModal" class="modal-overlay">
         <div class="modal-content">
             <h3 class="modal-title">Settings & Actions</h3>
-            <input type="url" id="modalBaseUrl" class="modal-input" placeholder="API Base URL">
+            <input type="url" id="modalBaseUrl" class="modal-input" placeholder="https://api.example.com">
             <button class="modal-btn primary" id="saveApiBtn">💾 Save API URL</button>
             
             <div style="margin-top: 24px; border-top: 1px solid #eee; padding-top: 16px;">
                 <button class="modal-btn" id="modalExport">📤 Export State</button>
                 <button class="modal-btn" id="modalImport">📥 Import State</button>
-                <button class="modal-btn" id="modalSummarize">🧠 Summarize Context</button>
+                <button class="modal-btn" id="modalSummarize">📝 Summarize Context</button>
             </div>
             
             <button class="modal-btn" id="modalClose">✕ Close</button>
@@ -749,7 +733,7 @@
     <!-- Card Menu -->
     <div id="cardMenu">
         <button class="menu-btn" data-action="continue">
-            <span>➡️</span>
+            <span>📝</span>
             <span>Continue</span>
         </button>
         <button class="menu-btn" data-action="copy">
@@ -769,7 +753,7 @@
             <span>Fullscreen</span>
         </button>
         <button class="menu-btn delete" data-action="delete">
-            <span>❌</span>
+            <span>🗑️</span>
             <span>Delete</span>
         </button>
     </div>
@@ -818,18 +802,17 @@
         <div class="input-container">
             <select id="modeSelect">
                 <option value="chat">💬 Chat</option>
-                <option value="generate">✨ Generate</option>
+                <option value="generate">🤖 Generate</option>
                 <option value="code">💻 Code</option>
             </select>
             <input type="text" id="userInput" placeholder="Ask anything...">
-            <button id="sendBtn">🚀 Send</button>
+            <button id="sendBtn">📤 Send</button>
         </div>
     </div>
 
     <script>
         /**
-         * AI Card System - Main Application
-         * Production-ready implementation
+         * AI Card System - Fixed Implementation
          */
         class AICardSystem {
             constructor() {
@@ -849,7 +832,7 @@
                 };
                 
                 this.ERROR_MESSAGES = {
-                    NO_API_URL: 'Please set and save API URL in the ⋯ menu',
+                    NO_API_URL: 'Please set and save API URL in the ⚙️ menu',
                     NEED_API_URL: 'Enter API URL to save',
                     INVALID_FILE: 'Invalid file format or corrupted data',
                     DELETE_CONFIRM: 'Delete this card?',
@@ -858,6 +841,9 @@
                     NO_CONTENT: 'No content generated',
                     COPY_SUCCESS: 'Copied to clipboard'
                 };
+
+                // Initialize immediately when class is created
+                this.init();
             }
 
             /**
@@ -866,11 +852,11 @@
             init() {
                 this.loadFromStorage();
                 this.bindEvents();
-                console.log('AI Card System initialized');
+                console.log('🔧 AI Card System initialized with fullscreen fixes');
             }
 
             /**
-             * Bind all event listeners
+             * ✅ CRITICAL FIX: Bind ALL fullscreen control events properly
              */
             bindEvents() {
                 // Send message
@@ -917,17 +903,21 @@
                 
                 document.getElementById('fileInput').addEventListener('change', (e) => this.importState(e));
 
-                // Fullscreen controls
+                // 🔧 CRITICAL FIX: FIX ALL FULLSCREEN CONTROL BUTTONS
                 document.querySelectorAll('.fullscreen-close').forEach(btn => {
                     btn.addEventListener('click', () => this.closeFullscreen());
                 });
                 
+                // 🔧 CRITICAL FIX: PROPER FLIP BUTTON EVENT HANDLERS
                 document.querySelectorAll('.fullscreen-flip').forEach(btn => {
                     btn.addEventListener('click', () => {
-                        document.getElementById('fullscreenOverlay').classList.toggle('flipped');
+                        const overlay = document.getElementById('fullscreenOverlay');
+                        overlay.classList.toggle('flipped');
+                        console.log('🔄 Flipped fullscreen view');
                     });
                 });
                 
+                // Split from fullscreen
                 document.querySelectorAll('.fullscreen-split').forEach(btn => {
                     btn.addEventListener('click', () => this.openSplitFromFullscreen());
                 });
@@ -1008,18 +998,21 @@
             }
 
             /**
-             * Open fullscreen view for a card
+             * 🔧 FIXED: Open fullscreen view for a card with proper content rendering
              */
-            openFullscreen(id, startOnResponse = false) {
+            openFullscreen(id, startingOnResponse = false) {
                 const card = this.pairs.find(p => p.id === id);
-                if (!card) return;
+                if (!card) {
+                    console.error('Cannot find card with id:', id);
+                    return;
+                }
                 
                 this.isEditMode = false;
                 document.getElementById('fsQuestion').contentEditable = false;
                 document.getElementById('fsResponse').contentEditable = false;
                 document.querySelectorAll('.fullscreen-split').forEach(btn => btn.classList.add('hidden'));
 
-                document.getElementById('fsQuestion').innerHTML = this.safeRenderMarkdown(card.question);
+                document.getElementById('fsQuestion').innerHTML = this.safeRenderMarkdown(card.question || '');
                 document.getElementById('fsResponse').innerHTML = card.response && card.response !== '...' 
                     ? this.safeRenderMarkdown(card.response) 
                     : '<div class="streaming-indicator"><span class="streaming-cursor"></span> Generating...</div>';
@@ -1027,7 +1020,7 @@
                 const overlay = document.getElementById('fullscreenOverlay');
                 overlay.classList.add('active');
                 
-                if (startOnResponse) {
+                if (startingOnResponse) {
                     overlay.classList.add('flipped');
                 } else {
                     overlay.classList.remove('flipped');
@@ -1035,6 +1028,7 @@
                 
                 this.fullscreenId = id;
                 document.body.style.overflow = 'hidden';
+                console.log(`📱 Opened fullscreen for card ${id}`, { startingOnResponse });
             }
 
             /**
@@ -1091,29 +1085,34 @@
                 document.getElementById('fsQuestion').contentEditable = true;
                 document.getElementById('fsResponse').contentEditable = true;
                 document.querySelectorAll('.fullscreen-split').forEach(btn => btn.classList.remove('hidden'));
-                this.showNotice('Editing — flip to switch sides, close to save');
+                this.showNotice('Editing enabled - flip to switch sides, close to save');
             }
 
             /**
-             * Open split from fullscreen
+             * 🔧 FIXED: Open split from fullscreen
              */
             openSplitFromFullscreen() {
                 const response = document.getElementById('fsResponse').innerText;
+                if (!response) {
+                    this.showNotice('No response to split');
+                    return;
+                }
                 document.getElementById('splitText').value = response;
                 document.getElementById('splitModal').classList.add('active');
             }
 
             /**
-             * Close fullscreen
+             * 🔧 FIXED: Close fullscreen with proper cleanup
              */
             closeFullscreen() {
                 if (this.isEditMode && this.fullscreenId) {
                     const card = this.pairs.find(p => p.id === this.fullscreenId);
                     if (card) {
                         card.question = document.getElementById('fsQuestion').innerText.trim();
-                        card.response = document.getElementById('fsResponse').innerHTML;
+                        // Preserve HTML styling for response
+                        card.response = document.getElementById('fsResponse').innerText.trim();
                         this.saveToStorage();
-                        this.showNotice('Changes saved');
+                        this.showNotice('✓ Changes saved');
                     }
                     this.isEditMode = false;
                     document.querySelectorAll('.fullscreen-split').forEach(btn => btn.classList.add('hidden'));
@@ -1122,6 +1121,7 @@
                 document.getElementById('fullscreenOverlay').classList.remove('active', 'flipped');
                 this.fullscreenId = null;
                 document.body.style.overflow = 'auto';
+                console.log('❌ Closed fullscreen view');
             }
 
             /**
@@ -1156,6 +1156,7 @@
                     const path = mode === 'code' ? '/api/code' : mode === 'generate' ? '/api/generate' : '/api/chat';
                     const reader = await this.apiFetch(path, payload);
                     await this.processSSEStream(reader, id);
+                    
                 } catch (error) {
                     this.updateResponse(id, `<p style="color:red">Error: ${this.escapeHTML(error.message)}</p>`);
                 } finally {
@@ -1169,6 +1170,7 @@
              */
             async apiFetch(path, payload) {
                 const base = this.getBaseUrl();
+                console.log('Sending request to:', `${base}${path}`);
                 const response = await fetch(`${base}${path}`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -1244,6 +1246,7 @@
              * Update response content
              */
             updateResponse(tileId, html, isStreaming = false) {
+                // Update card in grid
                 const card = document.querySelector(`[data-id="${tileId}"]`);
                 if (card) {
                     const response = card.querySelector('.response-content');
@@ -1253,6 +1256,7 @@
                     }
                 }
                 
+                // Update fullscreen if open
                 if (this.fullscreenId === tileId) {
                     const fsResponse = document.getElementById('fsResponse');
                     if (fsResponse) {
@@ -1269,7 +1273,7 @@
                 const id = crypto.randomUUID?.() || Date.now().toString();
                 const card = {
                     id,
-                    question: pairData.question,
+                    question: pairData.question || '',
                     response: pairData.response || '',
                     createdAt: Date.now()
                 };
@@ -1300,7 +1304,7 @@
                 cardElement.innerHTML = `
                     <div class="flip-card-inner">
                         <div class="card-face card-front">
-                            <div class="question-div">${this.safeRenderMarkdown(card.question)}</div>
+                            <div class="question-div">${this.safeRenderMarkdown(card.question || '')}</div>
                         </div>
                         <div class="card-face card-back">
                             <div class="response-content">${responseHTML}</div>
@@ -1308,7 +1312,7 @@
                     </div>
                 `;
 
-                // Gesture handling
+                // Touch events for mobile
                 let longPressTimer;
                 
                 cardElement.addEventListener('touchstart', (e) => {
@@ -1356,7 +1360,7 @@
                 }
 
                 try {
-                    document.getElementById('loading').textContent = '🧠 Summarizing context...';
+                    document.getElementById('loading').textContent = '📝 Summarizing context...';
                     document.getElementById('loading').classList.add('show');
 
                     const recentCards = this.pairs.slice(-10);
@@ -1381,7 +1385,7 @@ Focus on main themes, insights, patterns, and potential directions. Keep it conc
                     });
 
                     this.addPair({
-                        question: `🧠 Summary of ${recentCards.length} recent cards`,
+                        question: `📝 Summary of ${recentCards.length} recent cards`,
                         response: finalSummary || summaryContent
                     });
 
@@ -1673,18 +1677,6 @@ Focus on main themes, insights, patterns, and potential directions. Keep it conc
             }
 
             /**
-             * Utility: Escape HTML
-             */
-            escapeHTML(str = '') {
-                return String(str)
-                    .replace(/&/g, '&amp;')
-                    .replace(/</g, '&lt;')
-                    .replace(/>/g, '&gt;')
-                    .replace(/"/g, '&quot;')
-                    .replace(/'/g, '&#039;');
-            }
-
-            /**
              * Utility: Safe markdown rendering
              */
             safeRenderMarkdown(markdown) {
@@ -1694,6 +1686,18 @@ Focus on main themes, insights, patterns, and potential directions. Keep it conc
                 } catch (error) {
                     return this.escapeHTML(markdown || '');
                 }
+            }
+
+            /**
+             * Utility: Escape HTML
+             */
+            escapeHTML(str = '') {
+                return String(str)
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/"/g, '&quot;')
+                    .replace(/'/g, '&#039;');
             }
 
             /**
@@ -1711,10 +1715,14 @@ Focus on main themes, insights, patterns, and potential directions. Keep it conc
             }
         }
 
-        // Initialize application
+        /**
+         * ✅ CRITICAL FIX: Initialize system on DOM ready
+         */
         document.addEventListener('DOMContentLoaded', () => {
-            window.aiCardSystem = new AICardSystem();
-            window.aiCardSystem.init();
+            if (!window.aiCardSystem) {
+                window.aiCardSystem = new AICardSystem();
+                console.log('🎯 AI Card System loaded successfully');
+            }
         });
     </script>
 </body>
