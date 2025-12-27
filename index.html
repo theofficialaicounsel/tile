@@ -361,8 +361,8 @@
     <!-- Header -->
     <div id="topBar">
         <div style="display: flex; align-items: center; gap: 8px;">
-            <div id="brandName">ai-Ncards</div>
-            <button class="btn-icon" id="undoBtn" title="Undo"><i class="fas fa-undo"></i></button>
+            <div id="brandName" title="Double-click to rename">ai-Ncards</div>
+            <button class="btn-icon" id="undoBtn" title="Undo"><i class=" FAS fa-undo"></i></button>
         </div>
         <div>
             <button class="btn-icon" id="settingsBtn" title="Settings"><i class="fas fa-cog"></i></button>
@@ -380,12 +380,7 @@
     </div>
 
     <!-- Main Area -->
-    <div id="grid">
-        <div id="emptyState" style="text-align:center; padding-top:50px; color:#555;">
-            <h3>Start Drafting</h3>
-            <p>Double click card front to edit.<br>Click Brand to rename.<br>Long press for menu.</p>
-        </div>
-    </div>
+    <div id="grid"></div>
 
     <!-- Input -->
     <div id="inputPanel">
@@ -453,7 +448,7 @@
         </div>
     </div>
 
-    <!-- Generic Prompt Modal (AI, Rename, Edit) -->
+    <!-- Generic Prompt Modal -->
     <div class="modal-overlay" id="promptModal">
         <div class="modal">
             <div class="modal-header">
@@ -488,7 +483,7 @@
                 this.menuTarget = null;
                 this.fsId = null;
                 this.fsFlipped = false;
-                this.promptContext = null; // { type: 'edit'|'ai'|'rename', id: string }
+                this.promptContext = null; // { type: 'edit-front'|'edit-back'|'rename', id: string }
                 this.history = [];
             }
 
@@ -541,7 +536,20 @@
                 grid.innerHTML = '';
                 
                 if (this.state.cards.length === 0) {
-                    grid.innerHTML = `<div style="text-align:center; padding-top:50px; color:#555; width:100%;"><h3>Start Drafting</h3><p>Double tap front to edit.<br>Click 'ai-Ncards' to rename.</p></div>`;
+                    grid.innerHTML = `
+                        <div style="grid-column: 1 / -1; text-align:center; padding: 60px 20px; color:#666;">
+                            <div style="font-size:48px; margin-bottom:16px; opacity:0.4;">✦</div>
+                            <h3>No cards yet</h3>
+                            <p style="max-width:300px; margin:20px auto; line-height:1.5; font-size:14px;">
+                                Type a message below to start drafting.<br><br>
+                                <small>
+                                    • Double-click front to edit request<br>
+                                    • Double-click back to edit response<br>
+                                    • Double-click title to rename<br>
+                                    • Long-press card for menu
+                                </small>
+                            </p>
+                        </div>`;
                     return;
                 }
 
@@ -582,6 +590,7 @@
                                 <div class="card-header">
                                     <span>RESPONSE</span>
                                     <div class="card-actions">
+                                        <i class="fas fa-redo-alt" onclick="app.replay('${c.id}', event)" title="Replay animation"></i>
                                         <i class="fas fa-volume-up" onclick="app.speak('${c.id}', event)"></i>
                                         <i class="fas fa-ellipsis-h" onclick="app.openMenu('${c.id}', event)"></i>
                                     </div>
@@ -593,8 +602,12 @@
 
                     // Apply Custom Styles
                     if (c.style) {
-                        card.querySelector('.front').style.backgroundColor = c.style.bg;
-                        card.querySelector('.front').style.color = c.style.color;
+                        const front = card.querySelector('.front');
+                        const back = card.querySelector('.back');
+                        if (front && c.style.bg) front.style.backgroundColor = c.style.bg;
+                        if (back && c.style.bg) back.style.backgroundColor = c.style.bg;
+                        if (front && c.style.color) front.style.color = c.style.color;
+                        if (back && c.style.color) back.style.color = c.style.color;
                     }
 
                     // Interactions
@@ -607,12 +620,21 @@
                         card.classList.toggle('flipped');
                     });
 
-                    // Double Click to Edit Request (Front only)
-                    card.querySelector('.front').addEventListener('dblclick', (e) => {
+                    // Double Click to Edit Front (Request)
+                    card.querySelector('.front .card-content').addEventListener('dblclick', (e) => {
                         e.stopPropagation();
-                        this.promptContext = { type: 'edit', id: c.id };
+                        this.promptContext = { type: 'edit-front', id: c.id };
                         document.getElementById('promptTitle').textContent = "Edit Request";
                         document.getElementById('promptText').value = c.q;
+                        document.getElementById('promptModal').style.display = 'flex';
+                    });
+
+                    // Double Click to Edit Back (Response)
+                    card.querySelector('.back .card-content').addEventListener('dblclick', (e) => {
+                        e.stopPropagation();
+                        this.promptContext = { type: 'edit-back', id: c.id };
+                        document.getElementById('promptTitle').textContent = "Edit Response";
+                        document.getElementById('promptText').value = c.r;
                         document.getElementById('promptModal').style.display = 'flex';
                     });
 
@@ -638,6 +660,32 @@
             }
 
             // --- Actions ---
+            replay(id, e) {
+                if (e) e.stopPropagation();
+                const card = this.state.cards.find(c => c.id === id);
+                if (!card || !card.r || card.r === '...' || card.r.includes('Error') || card.r.includes('Cancelled')) return;
+
+                const original = card.r;
+                card.r = '';
+                this.render();
+
+                const words = original.split(/\s+/);
+                let i = 0;
+                const interval = setInterval(() => {
+                    if (i < words.length) {
+                        card.r += (i > 0 ? ' ' : '') + words[i];
+                        i++;
+                        const el = document.querySelector(`.flip-card[data-id="${id}"] .back .card-content`);
+                        if (el) {
+                            el.innerHTML = this.md(card.r) + '<span class="cursor"></span>';
+                        }
+                    } else {
+                        clearInterval(interval);
+                        card.r = original;
+                        this.render();
+                    }
+                }, 60);
+            }
 
             toggleSelect(id, e) {
                 if (e) e.stopPropagation();
@@ -665,15 +713,18 @@
                 const combined = sel.map(c => `Topic: ${c.q}. Content: ${c.r}`).join('\n\n');
                 const prompt = `Merge these notes into one coherent response:\n\n${combined}`;
                 
-                // Create new card
                 const id = crypto.randomUUID();
                 this.state.cards.push({ id, q: "Merged Topic", r: "...", style: {} });
                 this.save();
                 this.render();
                 
-                // Stream to it
                 this.sendRequest(prompt, id);
                 this.selected.clear();
+
+                setTimeout(() => {
+                    const grid = document.getElementById('grid');
+                    grid.scrollTop = grid.scrollHeight;
+                }, 150);
             }
 
             openMenu(id, e) {
@@ -681,20 +732,11 @@
                 this.menuTarget = id;
                 const menu = document.getElementById('cardMenu');
                 
-                // Position
-                let x, y;
-                if (e && e.clientX) {
-                    x = e.clientX; 
-                    y = e.clientY;
-                } else {
-                    // Center of screen if no event
-                    x = window.innerWidth / 2;
-                    y = window.innerHeight / 2;
-                }
+                let x = e?.clientX || window.innerWidth / 2;
+                let y = e?.clientY || window.innerHeight / 2;
                 
                 menu.style.display = 'block';
                 
-                // Boundary Check
                 if (x + 160 > window.innerWidth) x = window.innerWidth - 170;
                 if (y + 200 > window.innerHeight) y = window.innerHeight - 210;
 
@@ -729,26 +771,26 @@
             async sendRequest(prompt, targetId = null) {
                 const proxy = this.getProxy();
                 
-                // If no target, create new card
                 if (!targetId) {
                     const id = crypto.randomUUID();
                     this.state.cards.push({ id, q: prompt, r: "...", style: {} });
                     this.save();
                     this.render();
-                    targetId = id;
+
+                    // Auto-scroll
                     setTimeout(() => {
-                        const el = document.querySelector(`.flip-card[data-id="${id}"]`);
-                        if (el) el.classList.add('flipped');
-                    }, 100);
+                        const grid = document.getElementById('grid');
+                        grid.scrollTop = grid.scrollHeight;
+                    }, 150);
+
+                    targetId = id;
                 } else {
-                    // Update existing card to show loading
                     const card = this.state.cards.find(c => c.id === targetId);
                     if (card) card.r = "...";
                     this.render();
                 }
 
                 this.streamId = targetId;
-                this.render(); // Show loading state
 
                 const fullPrompt = SYSTEM_PROMPT + "\n\nUser: " + prompt;
 
@@ -771,9 +813,8 @@
                         if (done) break;
                         buffer += decoder.decode(value, { stream: true });
 
-                        // Parse SSE (Server Sent Events)
                         const lines = buffer.split('\n\n');
-                        buffer = lines.pop() || ""; // Keep incomplete part
+                        buffer = lines.pop() || "";
 
                         for (const line of lines) {
                             if (line.startsWith('data: ')) {
@@ -786,7 +827,7 @@
                                         fullText += chunk;
                                         this.updateStream(targetId, fullText);
                                     }
-                                } catch (e) { /* ignore parse errors in stream */ }
+                                } catch (e) { }
                             }
                         }
                     }
@@ -802,17 +843,25 @@
             }
 
             updateStream(id, text) {
-                // Remove internal commands from view
                 const clean = text.replace(/![^!]+!/g, '');
                 const card = this.state.cards.find(c => c.id === id);
                 if (card) {
+                    const wasEmpty = !card.r || card.r.trim() === '' || card.r === '...';
                     card.r = clean;
-                    
-                    // Optimistic UI update for current visible card only
+
                     const el = document.querySelector(`.flip-card[data-id="${id}"] .back .card-content`);
-                    if (el) el.innerHTML = this.md(clean) + `<span class="cursor"></span>`;
-                    
-                    // Update fullscreen if open
+                    if (el) {
+                        el.innerHTML = this.md(clean) + `<span class="cursor"></span>`;
+                    }
+
+                    // Auto-flip on first real content
+                    if (wasEmpty && clean.trim().length > 0) {
+                        const cardEl = document.querySelector(`.flip-card[data-id="${id}"]`);
+                        if (cardEl && !cardEl.classList.contains('flipped')) {
+                            cardEl.classList.add('flipped');
+                        }
+                    }
+
                     if (this.fsId === id && !this.fsFlipped) {
                         document.getElementById('fsContent').innerHTML = this.md(clean) + `<span class="cursor"></span>`;
                     }
@@ -824,10 +873,8 @@
                 const card = this.state.cards.find(c => c.id === id);
                 if (!card) return;
 
-                // 1. Extract Commands
                 let cleanText = text;
 
-                // Theme
                 const themeMatch = text.match(/!theme:([^!]+)!/);
                 if (themeMatch && !this.state.theme.lock) {
                     const parts = themeMatch[1].split(',');
@@ -847,7 +894,6 @@
                     cleanText = cleanText.replace(themeMatch[0], '');
                 }
 
-                // Card Styles
                 const bgMatch = text.match(/!bg:([^!]+)!/);
                 const colorMatch = text.match(/!text:([^!]+)!/);
                 if (bgMatch || colorMatch) {
@@ -857,10 +903,8 @@
                     cleanText = cleanText.replace(bgMatch ? bgMatch[0] : '', '').replace(colorMatch ? colorMatch[0] : '', '');
                 }
 
-                // Actions (Merge / Clear / View)
                 if (text.includes('!action:merge!')) {
                     this.showToast("AI requested merge");
-                    // (Logic for auto-merge would go here, ignoring for manual control)
                 }
                 if (text.includes('!action:clear!')) {
                     this.state.cards = [];
@@ -871,8 +915,6 @@
                 if (text.includes('!action:view:grid!')) this.setView('grid');
                 if (text.includes('!action:view:list!')) this.setView('list');
 
-                // 2. Update Card Content
-                // Check for "New Request" or "New Response" instructions
                 const newReq = cleanText.match(/New Request:\s*(.+)/i);
                 const newRes = cleanText.match(/New Response:\s*(.+)/i);
 
@@ -885,13 +927,10 @@
                     cleanText = cleanText.replace(newRes[0], '');
                 }
 
-                // If no explicit "New Response" tag, but we have text, use it as response
                 if (!newRes && cleanText.trim().length > 0 && !card.r.includes('...')) {
-                     // Keep existing if complex parsing needed, or replace. 
-                     // Here: Replace only if it looks like a clean answer
-                     if (!text.includes('!')) {
-                         card.r = cleanText.trim();
-                     }
+                    if (!text.includes('!')) {
+                        card.r = cleanText.trim();
+                    }
                 }
 
                 this.save();
@@ -900,7 +939,6 @@
             }
 
             stopStream() {
-                // For simplicity, we just stop the UI update and mark error
                 this.streamId = null;
                 const card = this.state.cards.find(c => c.r === '...');
                 if (card) card.r = "Cancelled";
@@ -908,52 +946,44 @@
             }
 
             // --- Modal / Prompt Handling ---
-
             confirmPrompt() {
                 const val = document.getElementById('promptText').value.trim();
                 if (!val) return;
 
                 document.getElementById('promptModal').style.display = 'none';
 
-                // Context 1: Edit Request
-                if (this.promptContext?.type === 'edit') {
+                if (this.promptContext?.type === 'edit-front') {
                     const card = this.state.cards.find(c => c.id === this.promptContext.id);
                     if (card) {
                         card.q = val;
                         this.save();
                         this.render();
                     }
-                    this.promptContext = null;
-                    return;
-                }
-
-                // Context 2: Rename Theme (Triggered by Brand Click)
-                if (this.promptContext?.type === 'rename') {
+                } else if (this.promptContext?.type === 'edit-back') {
+                    const card = this.state.cards.find(c => c.id === this.promptContext.id);
+                    if (card) {
+                        card.r = val;
+                        this.save();
+                        this.render();
+                    }
+                } else if (this.promptContext?.type === 'rename') {
                     if (val) {
                         this.state.theme.name = val;
                         this.applyTheme();
                         this.save();
-                        this.showToast("Theme Renamed");
+                        this.showToast("Renamed");
                     }
-                    this.promptContext = null;
-                    return;
-                }
-
-                // Context 3: AI Magic (Menu Option)
-                if (this.promptContext?.type === 'ai') {
+                } else if (this.promptContext?.type === 'ai') {
                     const card = this.state.cards.find(c => c.id === this.promptContext.id);
                     if (card) {
-                        // Send combined prompt
-                        const instruction = `Current: Q="${card.q}" R="${card.r}". Do this: ${val}`;
+                        const instruction = `Current: Q="\( {card.q}" R=" \){card.r}". Do this: ${val}`;
                         this.sendRequest(instruction, card.id);
                     }
-                    this.promptContext = null;
-                    return;
+                } else {
+                    this.sendRequest(val);
                 }
 
-                // Context 4: Generic AI (from Input Bar)
-                // If no specific context, it's a new request
-                this.sendRequest(val);
+                this.promptContext = null;
             }
 
             // --- Fullscreen ---
@@ -963,8 +993,7 @@
                 const card = this.state.cards.find(c => c.id === id);
                 if (!card) return;
 
-                const cont = document.getElementById('fsContent');
-                cont.innerHTML = this.md(card.r);
+                document.getElementById('fsContent').innerHTML = this.md(card.r);
                 document.getElementById('fullscreenOverlay').style.display = 'flex';
             }
 
@@ -1005,11 +1034,11 @@
             }
 
             toggleThemeMode() {
-                const t = this.state.theme;
+                const t = this.state  = this.state.theme;
                 if (t.bg === '#121212') {
-                    t.bg = '#f8f9fa'; t.cardBg = '#ffffff'; t.text = '#222'; t.border = '#ddd';
+                    t.bg = '#f8f9fa'; t.cardBg = '#ffffff'; t.text = '#222'; t.border = '#ddd'; t.primary = '#d32f2f';
                 } else {
-                    t.bg = '#121212'; t.cardBg = '#1e1e1e'; t.text = '#f5f5f5'; t.border = '#333';
+                    t.bg = '#121212'; t.cardBg = '#1e1e1e'; t.text = '#f5f5f5'; t.border = '#333'; t.primary = '#c41e3a';
                 }
                 this.applyTheme();
                 this.save();
@@ -1060,32 +1089,31 @@
 
             // --- Event Binding ---
             bindEvents() {
-                // 1. Input / Send
                 const input = document.getElementById('userInput');
                 const send = () => {
                     const val = input.value.trim();
                     if (!val) return;
                     input.value = '';
-                    this.sendRequest(val); // New Request
+                    this.sendRequest(val);
                 };
                 input.addEventListener('keydown', (e) => { if (e.key === 'Enter') send(); });
                 document.getElementById('sendBtn').onclick = send;
 
-                // 2. Header Buttons
                 document.getElementById('settingsBtn').onclick = () => {
+                    document.getElementById('proxyInput').value = this.state.settings.proxy;
                     document.getElementById('settingsModal').style.display = 'flex';
                 };
                 document.getElementById('undoBtn').onclick = () => this.undo();
                 
-                // 3. Brand Click (Rename)
-                document.getElementById('brandName').onclick = () => {
+                // Double-click title to rename
+                document.getElementById('brandName').ondblclick = () => {
                     this.promptContext = { type: 'rename' };
-                    document.getElementById('promptTitle').textContent = "Rename Theme";
+                    document.getElementById('promptTitle').textContent = "Rename App";
                     document.getElementById('promptText').value = this.state.theme.name;
                     document.getElementById('promptModal').style.display = 'flex';
                 };
 
-                // 4. Context Menu Actions
+                // Context Menu Actions
                 document.getElementById('cardMenu').addEventListener('click', (e) => {
                     const act = e.target.dataset.act;
                     if (!act || !this.menuTarget) return;
@@ -1104,7 +1132,6 @@
                             document.getElementById('promptModal').style.display = 'flex';
                             break;
                         case 'style':
-                            // Quick style prompt
                             const style = prompt("Enter style (e.g. 'red bg, white text'):");
                             if (style) this.sendRequest(`Apply style to card: ${style}. Card: ${card.q}`, card.id);
                             break;
@@ -1124,7 +1151,7 @@
                     }
                 });
 
-                // 5. Close Modals on Outside Click
+                // Close on outside click
                 window.onclick = (e) => {
                     if (e.target.classList.contains('modal-overlay')) {
                         e.target.style.display = 'none';
@@ -1134,17 +1161,34 @@
                     }
                 };
 
-                // 6. Hide Context Menu on Scroll
                 document.getElementById('grid').addEventListener('scroll', () => {
                     document.getElementById('cardMenu').style.display = 'none';
                 });
+
+                // Global keyboard shortcuts
+                document.addEventListener('keydown', (e) => {
+                    if (e.key === 'Escape') {
+                        document.querySelectorAll('.modal-overlay, #fullscreenOverlay').forEach(m => m.style.display = 'none');
+                        document.getElementById('cardMenu').style.display = 'none';
+                    }
+                    if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
+                        e.preventDefault();
+                        this.undo();
+                    }
+                });
+
+                // Auto-focus prompt modal
+                const promptModal = document.getElementById('promptModal');
+                new MutationObserver(() => {
+                    if (promptModal.style.display === 'flex') {
+                        setTimeout(() => document.getElementById('promptText').focus(), 100);
+                    }
+                }).observe(promptModal, { attributes: true, attributeFilter: ['style'] });
             }
         }
 
-        // --- Init ---
         const app = new App();
         window.onload = () => app.init();
-
     </script>
 </body>
 </html>
