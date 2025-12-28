@@ -1,15 +1,18 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ai-Ntile</title>
+  <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ai-Ncards</title>
-    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/responsivevoice@1.0.0/responsivevoice.min.js"></script>
+    
+    
+    
+    
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-
-    <style>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+  <style>
         :root {
             --primary: #c41e3a;
             --bg: #121212;
@@ -22,8 +25,8 @@
         body { margin: 0; background: var(--bg); color: var(--text); font-family: system-ui, -apple-system, sans-serif; height: 100vh; overflow: hidden; display: flex; flex-direction: column; transition: background 0.3s, color 0.3s; }
 
         /* Header */
-        #topBar { height: 50px; display: flex; justify-content: space-between; align-items: center; padding: 0 15px; border-bottom: 1px solid var(--border); background: var(--bg); z-index: 10; }
-        #brandName { font-weight: 900; color: var(--primary); text-transform: uppercase; letter-spacing: 1px; cursor: pointer; font-size: 12px; }
+        #topBar { height: 45px; display: flex; justify-content: space-between; align-items: center; padding: 0 15px; border-bottom: 1px solid var(--border); background: var(--bg); z-index: 10; }
+        #brandName { font-weight: 1200; color: var(--primary); text-transform: lowercase; letter-spacing: 1px; cursor: pointer; font-size: 12px; }
         .btn-icon { background: rgba(128, 128, 128, 0.1); border: 1px solid var(--border); color: var(--text); width: 32px; height: 32px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; margin-left: 5px; }
         .btn-icon:hover { background: rgba(128, 128, 128, 0.2); }
 
@@ -80,7 +83,7 @@
         .card-actions i:hover { opacity: 1; color: var(--primary); }
 
         /* Input */
-        #inputPanel { padding: 10px; background: var(--bg); border-top: 1px solid var(--border); display: flex; gap: 8px; align-items: center; padding-bottom: calc(10px + var(--safe-area-bottom)); }
+        #inputPanel { padding: 35px; background: var(--bg); border-top: 1px solid var(--border); display: flex; gap: 8px; align-items: center; padding-bottom: calc(45px + var(--safe-area-bottom)); }
         #userInput { flex: 1; background: rgba(128, 128, 128, 0.1); border: 1px solid var(--border); color: var(--text); padding: 10px; border-radius: 20px; height: 40px; outline: none; }
         #userInput:focus { border-color: var(--primary); }
         #sendBtn { background: var(--primary); border: none; color: white; width: 40px; height: 40px; border-radius: 50%; font-weight: bold; cursor: pointer; font-size: 16px; }
@@ -129,120 +132,13 @@
             #grid { grid-template-columns: 1fr !important; }
         }
     </style>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/responsivevoice@1.0.0/responsivevoice.min.js"></script>
+  <title>ai-Ntile</title>
 </head>
 <body>
-
-    <div id="topBar">
-        <div style="display: flex; align-items: center; gap: 8px;">
-            <div id="brandName">ai-Ncards</div>
-            <button class="btn-icon" id="undoBtn" title="Undo"><i class="fas fa-undo"></i></button>
-        </div>
-        <div>
-            <button class="btn-icon" id="settingsBtn" title="Settings"><i class="fas fa-cog"></i></button>
-        </div>
-    </div>
-
-    <div id="selectionBar">
-        <div id="selectCount">0</div>
-        <div class="actions">
-            <button onclick="app.bulkMerge()">Merge</button>
-            <button onclick="app.clearSelection()">Cancel</button>
-            <button class="danger" onclick="app.bulkDelete()">Delete</button>
-        </div>
-    </div>
-
-    <div id="grid"></div>
-
-    <div id="inputPanel">
-        <input type="text" id="userInput" placeholder="Type to create..." autocomplete="off">
-        <button id="sendBtn"><i class="fas fa-arrow-up"></i></button>
-    </div>
-
-    <div id="cardMenu">
-        <button data-act="continue">Continue / Refine</button>
-        <button data-act="ai-edit">Magic Action (AI)</button>
-        <button data-act="style">Style</button>
-        <button data-act="copy">Copy</button>
-        <button data-act="fs">Fullscreen</button>
-        <button data-act="delete">Delete</button>
-    </div>
-
-    <div id="fullscreenOverlay">
-        <div id="fsHeader">
-            <div>
-                <button class="btn btn-secondary" onclick="app.fsFlip()">Flip</button>
-                <button class="btn btn-secondary" onclick="app.fsRead()">Read</button>
-            </div>
-            <button class="btn btn-secondary" onclick="app.closeFS()">Close</button>
-        </div>
-        <div id="fsContent"></div>
-    </div>
-
-    <div class="modal-overlay" id="settingsModal">
-        <div class="modal">
-            <div class="modal-header">
-                <strong>Settings</strong>
-                <button class="btn btn-secondary" onclick="document.getElementById('settingsModal').style.display='none'">X</button>
-            </div>
-            <div class="modal-body">
-                <div class="setting-row">
-                    <label>Proxy URL</label>
-                    <input type="text" id="proxyInput" placeholder="https://...">
-                </div>
-                <div class="setting-row">
-                    <label>View</label>
-                    <div class="toggle-group">
-                        <button class="toggle-btn" onclick="app.setView('list')">List</button>
-                        <button class="toggle-btn" onclick="app.setView('grid')">Grid</button>
-                    </div>
-                </div>
-                <div class="setting-row">
-                    <label>Theme Presets</label>
-                    <div class="toggle-group">
-                        <button class="toggle-btn" onclick="app.applyThemePreset('dracula')">Dracula</button>
-                        <button class="toggle-btn" onclick="app.applyThemePreset('solarized')">Solarized</button>
-                        <button class="toggle-btn" onclick="app.applyThemePreset('matrix')">Matrix</button>
-                        <button class="toggle-btn" onclick="app.applyThemePreset('light')">Light</button>
-                    </div>
-                    <div style="margin-top:5px; display:flex; gap:5px;">
-                        <button class="toggle-btn" onclick="app.toggleThemeMode()">Toggle</button>
-                        <button class="toggle-btn" id="lockBtn" onclick="app.toggleThemeLock()">Lock</button>
-                    </div>
-                </div>
-                <div class="setting-row">
-                    <label>Data Management</label>
-                    <div class="toggle-group">
-                        <button class="toggle-btn" onclick="app.exportData()">Export</button>
-                        <button class="toggle-btn" onclick="document.getElementById('importFile').click()">Import</button>
-                    </div>
-                    <input type="file" id="importFile" style="display:none" onchange="app.importData(this)">
-                    <button class="btn-danger" onclick="app.clearAllCards()">Clear All Cards</button>
-                    <br><br>
-                    <button class="btn-danger" onclick="app.factoryReset()">Factory Reset</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="modal-overlay" id="promptModal">
-        <div class="modal">
-            <div class="modal-header">
-                <strong id="promptTitle">Action</strong>
-                <button class="btn btn-secondary" onclick="document.getElementById('promptModal').style.display='none'">X</button>
-            </div>
-            <div class="modal-body">
-                <textarea id="promptText"></textarea>
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-secondary" onclick="document.getElementById('promptModal').style.display='none'">Cancel</button>
-                <button class="btn btn-primary" onclick="app.confirmPrompt()">OK</button>
-            </div>
-        </div>
-    </div>
-
-    <div id="toast">Action</div>
-
-    <script>
+  <script>
         class App {
             constructor() {
                 const defaultState = {
@@ -947,5 +843,106 @@
         const app = new App();
         window.onload = () => app.init();
     </script>
+  <div id="topBar">
+        <div style="display: flex; align-items: center; gap: 8px;">
+            <div id="brandName">ai-Ncards</div>
+            <button class="btn-icon" id="undoBtn" title="Undo"><i class="fas fa-undo"></i></button>
+        </div>
+        <div>
+            <button class="btn-icon" id="settingsBtn" title="Settings"><i class="fas fa-cog"></i></button>
+        </div>
+    </div>
+  <div id="selectionBar">
+        <div id="selectCount">0</div>
+        <div class="actions">
+            <button onclick="app.bulkMerge()">Merge</button>
+            <button onclick="app.clearSelection()">Cancel</button>
+            <button class="danger" onclick="app.bulkDelete()">Delete</button>
+        </div>
+    </div>
+  <div id="grid"></div>
+  <div id="inputPanel">
+        <input type="text" id="userInput" placeholder="Type to create..." autocomplete="off">
+        <button id="sendBtn"><i class="fas fa-arrow-up"></i></button>
+    </div>
+  <div id="cardMenu">
+        <button data-act="continue">Continue / Refine</button>
+        <button data-act="ai-edit">Magic Action (AI)</button>
+        <button data-act="style">Style</button>
+        <button data-act="copy">Copy</button>
+        <button data-act="fs">Fullscreen</button>
+        <button data-act="delete">Delete</button>
+    </div>
+  <div id="fullscreenOverlay">
+        <div id="fsHeader">
+            <div>
+                <button class="btn btn-secondary" onclick="app.fsFlip()">Flip</button>
+                <button class="btn btn-secondary" onclick="app.fsRead()">Read</button>
+            </div>
+            <button class="btn btn-secondary" onclick="app.closeFS()">Close</button>
+        </div>
+        <div id="fsContent"></div>
+    </div>
+  <div class="modal-overlay" id="settingsModal">
+        <div class="modal">
+            <div class="modal-header">
+                <strong>Settings</strong>
+                <button class="btn btn-secondary" onclick="document.getElementById('settingsModal').style.display='none'">X</button>
+            </div>
+            <div class="modal-body">
+                <div class="setting-row">
+                    <label>Proxy URL</label>
+                    <input type="text" id="proxyInput" placeholder="https://...">
+                </div>
+                <div class="setting-row">
+                    <label>View</label>
+                    <div class="toggle-group">
+                        <button class="toggle-btn" onclick="app.setView('list')">List</button>
+                        <button class="toggle-btn" onclick="app.setView('grid')">Grid</button>
+                    </div>
+                </div>
+                <div class="setting-row">
+                    <label>Theme Presets</label>
+                    <div class="toggle-group">
+                        <button class="toggle-btn" onclick="app.applyThemePreset('dracula')">Dracula</button>
+                        <button class="toggle-btn" onclick="app.applyThemePreset('solarized')">Solarized</button>
+                        <button class="toggle-btn" onclick="app.applyThemePreset('matrix')">Matrix</button>
+                        <button class="toggle-btn" onclick="app.applyThemePreset('light')">Light</button>
+                    </div>
+                    <div style="margin-top:5px; display:flex; gap:5px;">
+                        <button class="toggle-btn" onclick="app.toggleThemeMode()">Toggle</button>
+                        <button class="toggle-btn" id="lockBtn" onclick="app.toggleThemeLock()">Lock</button>
+                    </div>
+                </div>
+                <div class="setting-row">
+                    <label>Data Management</label>
+                    <div class="toggle-group">
+                        <button class="toggle-btn" onclick="app.exportData()">Export</button>
+                        <button class="toggle-btn" onclick="document.getElementById('importFile').click()">Import</button>
+                    </div>
+                    <input type="file" id="importFile" style="display:none" onchange="app.importData(this)">
+                    <button class="btn-danger" onclick="app.clearAllCards()">Clear All Cards</button>
+                    <br><br>
+                    <button class="btn-danger" onclick="app.factoryReset()">Factory Reset</button>
+                </div>
+            </div>
+        </div>
+    </div>
+  <div class="modal-overlay" id="promptModal">
+        <div class="modal">
+            <div class="modal-header">
+                <strong id="promptTitle">Action</strong>
+                <button class="btn btn-secondary" onclick="document.getElementById('promptModal').style.display='none'">X</button>
+            </div>
+            <div class="modal-body">
+                <textarea id="promptText"></textarea>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="document.getElementById('promptModal').style.display='none'">Cancel</button>
+                <button class="btn btn-primary" onclick="app.confirmPrompt()">OK</button>
+            </div>
+        </div>
+    </div>
+  <div id="toast">Action</div>
 </body>
 </html>
